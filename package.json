@@ -1,0 +1,42 @@
+{
+  "name": "glean",
+  "version": "1.0.0",
+  "description": "Glean (拾句) - Interactive bilingual video learning extension for YouTube, Bilibili, and Quark Pan",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --max-old-space-size=8192 ./node_modules/wxt/bin/wxt.mjs",
+    "dev:firefox": "node --max-old-space-size=8192 ./node_modules/wxt/bin/wxt.mjs -b firefox",
+    "build": "node --max-old-space-size=8192 ./node_modules/wxt/bin/wxt.mjs build",
+    "build:firefox": "node --max-old-space-size=8192 ./node_modules/wxt/bin/wxt.mjs build -b firefox",
+    "zip": "node --max-old-space-size=8192 ./node_modules/wxt/bin/wxt.mjs zip",
+    "zip:firefox": "node --max-old-space-size=8192 ./node_modules/wxt/bin/wxt.mjs zip -b firefox",
+    "compile": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit",
+    "test": "bun test tests/",
+    "test:unit": "bun test tests/",
+    "test:e2e": "npx playwright test",
+    "postinstall": "node ./node_modules/wxt/bin/wxt.mjs prepare"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.475.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "srt-parser-2": "^1.2.3",
+    "tailwind-merge": "^3.0.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/chrome": "^0.0.304",
+    "@types/node": "^22.13.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "wxt": "^0.19.28"
+  }
+}

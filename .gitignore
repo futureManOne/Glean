@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.agents
+
+# Build outputs
+.output/
+.wxt/
+dist/
+*.zip
+
+# Environment variables & secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+
+# Tests & Coverage
+test-results/
+playwright-report/
+blob-report/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun.lockb
+*.log
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Internal AI task logs & scratch files
+ORIGINAL_REQUEST.md
+*.local
+

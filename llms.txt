@@ -1,0 +1,107 @@
+# Glean (拾句) - AI Agent & LLM Context File (llms.txt)
+> Project: Glean (拾句)
+> Specification: https://llmstxt.org/
+> Repository Type: Chrome Extension (Manifest V3)
+> Primary Tech Stack: TypeScript, React 18, Tailwind CSS, WXT (Vite), Zustand, Lucide Icons
+> Runtime / Package Manager: Bun (compatible with Node.js 18+)
+
+## 1. Project Overview
+Glean (拾句) is a high-performance, open-source bilingual video learning browser extension for supported web video players, providing:
+1. Four-layer subtitle sniffing across Quark Cloud Drive (`pan.quark.cn`), YouTube (`youtube.com`), and universal HTML5 video players.
+2. Built-in offline dictionary (skywind3000/ECDICT) with 42,978 high-frequency vocabulary entries and 94,108 morphological lemma normalization mappings (<0.03ms lookup latency).
+3. Context-aware AI linguistic sentence & word analysis powered by OpenAI-compatible LLM gateways (Grok 4.6 via Grok2API, DeepSeek V3, GPT-4o mini, Claude).
+4. Trilingual UI and prompt generation supporting English (`en`), Simplified Chinese (`zh-CN`), and Japanese (`ja`).
+5. Immersive learning controls: 4-state subtitle cycling (`both` -> `target` -> `translation` -> `hidden`), frosted blur listening mask mode, sub-millisecond A-B sentence repeat, and 1-click Anki TSV export.
+
+## 2. Directory Structure & Key Files
+- `src/entrypoints/`
+  - `content.ts`: Injected script mounting `<language-reactor-overlay>` into Shadow DOM for total style isolation. Attaches video observer and player adapters.
+  - `background.ts`: MV3 service worker lifecycle manager.
+  - `popup/App.tsx`: Toolbar popup UI with trilingual language switcher, AI provider presets, test connection, and Anki word export.
+- `src/core/`
+  - `player/`: Video player adapter layer (`BaseAdapter.ts`, `QuarkAdapter.ts`, `UniversalAdapter.ts`).
+  - `subtitle/`: Subtitle parser (`parser.ts`), tokenization & lemmatization (`tokenizer.ts`), and binary search sync engine (`syncEngine.ts`).
+  - `quark/`: Quark Cloud Drive player reverse engineering and textTrack sniffer (`quarkSubtitleSniffer.ts`).
+  - `youtube/`: YouTube `/timedtext` JSON3 parser and rolling teleprompter deduplicator (`youtubeSubtitleSniffer.ts`).
+  - `dictionary/`:
+    - `ecdictCore.ts` & `ecdictCoreData.json`: 42,978 curated offline words with phonetics, pos, translations, CEFR, and Collins ratings.
+    - `lemmaCoreData.json`: 94,108 irregular inflection and morphological mappings.
+    - `aiExplainer.ts`: Multilingual Grok 4.6 / DeepSeek contextual word explainer with 5-layer defensive fallback.
+    - `aiCache.ts`: Persistent IndexedDB/LocalStorage word explanation cache.
+  - `ai/`:
+    - `sentenceAnalyzer.ts`: Multilingual 4-dimension deep sentence linguistic analyzer.
+  - `api/`:
+    - `llmClient.ts`: Resilient OpenAI-compatible HTTP chat completion client with timeout protection and JSON recovery.
+  - `i18n/`:
+    - Typed trilingual localization system (`locales/en.ts`, `locales/zh-CN.ts`, `locales/ja.ts`, `index.ts`).
+- `src/store/`
+  - `useAppStore.ts`: Global Zustand state store managing subtitles, playback sync, saved words, and user settings.
+- `src/ui/`
+  - `components/AppOverlay.tsx`: Master host container managing global keyboard hotkeys and component hierarchy.
+  - `components/QuarkControlBar.tsx`: Floating top control bar with subtitle loader, language selector, and modal settings.
+  - `components/SubtitleOverlay.tsx`: Interactive draggable bilingual subtitle capsule with frosted mask mode and word token click handlers.
+  - `components/WordPopup.tsx`: 1:1 replica word card (Meaning, Grammar, Examples, CEFR/Collins badges, mastery bookmarking).
+  - `components/SentenceAnalysisCard.tsx`: AI sentence analysis drawer with syntactic breakdown, collocations, and pronunciation tips.
+  - `components/TranscriptPanel.tsx`: Right-side transcript drawer with subtitle search, vocabulary extraction, and Anki export.
+
+## 3. Core Data Contracts (JSON Schemas)
+
+### SubtitleCue
+```typescript
+interface SubtitleCue {
+  id: number;
+  start: number; // in seconds
+  end: number;   // in seconds
+  textEn: string;
+  textZh: string;
+  tokens?: WordToken[];
+}
+```
+
+### AppSettings
+```typescript
+interface AppSettings {
+  aiProvider: 'grok' | 'deepseek' | 'openai' | 'custom';
+  apiKey: string;
+  apiBaseUrl: string;
+  modelName: string;
+  uiLanguage?: 'zh-CN' | 'en' | 'ja';
+  primaryLang: 'en';
+  secondaryLang: string; // 'zh-CN' | 'en' | 'ja'
+  subtitleMode: 'both' | 'target' | 'translation' | 'hidden';
+  subtitleFontSize: number;
+  transcriptFontSize: number;
+  sidePanelWidth: number;
+  subtitleBottomPercent: number; // 3% to 80%
+  subtitleOpacity: number;       // 0.2 to 1.0
+  showEnglish: boolean;
+  showChinese: boolean;
+  maskChinese: boolean;          // Listening frosted mask
+  maskEnglish: boolean;
+  autoPauseOnHover: boolean;
+  autoPauseAfterSentence: boolean;
+  highlightVocabulary: boolean;
+  subtitleTimeOffset: number;
+  repeatCount: number;
+  playbackSpeed: number;
+  hotkeys: Record<string, string>;
+}
+```
+
+## 4. Development, Build & Test Commands
+```bash
+# Install dependencies
+bun install
+
+# Run all automated tests (186+ unit & adversarial stress tests)
+bun test tests/
+
+# Run specific test suites
+bun test tests/i18n.test.ts
+bun test tests/ecdictCore.test.ts
+bun test tests/useAppStore.test.ts
+
+# Production build for Chrome MV3
+bun run build
+# Output directory: .output/chrome-mv3/
+```
