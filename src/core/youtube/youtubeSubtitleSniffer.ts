@@ -15,7 +15,9 @@ import {
   assembleLongAsrSentences,
   assembleConciseAsrCues,
   splitLongCueSemantically,
-  alignBilingualJson3Events
+  alignBilingualJson3Events,
+  isCjkText,
+  isChineseText
 } from '../subtitle/parser';
 import { isYouTubeAdPlaying, detectPageVideoTitle } from './titleSanitizer';
 import { bilingualTranslator } from '../ai/bilingualTranslator';
@@ -122,7 +124,7 @@ export class YouTubeSubtitleSniffer {
       return;
     }
 
-    console.log(`[VocabFrame] YouTube video switch detected: "${this.cachedMainVideoId}" -> "${newVideoId}". Resetting sniffer.`);
+    console.log(`[Glean] YouTube video switch detected: "${this.cachedMainVideoId}" -> "${newVideoId}". Resetting sniffer.`);
     this.hasOfficialSubtitles = false;
     this.isLiveCaptionActive = false;
     this.isAdCurrentlyPlaying = false;
@@ -284,7 +286,7 @@ export class YouTubeSubtitleSniffer {
       return false;
     }
 
-    console.log(`[VocabFrame] Prefetching full subtitles upfront for ${curVid} (attempt ${retryCount + 1})...`);
+    console.log(`[Glean] Prefetching full subtitles upfront for ${curVid} (attempt ${retryCount + 1})...`);
 
     // 1. Try extracting caption tracks directly from DOM static <script> tags matching curVid
     const tracks = this.extractCaptionTracksFromDom(curVid);
@@ -541,8 +543,15 @@ export class YouTubeSubtitleSniffer {
       ]);
 
       if (origRes && Array.isArray(origRes.events) && origRes.events.length > 0) {
-        let parsed = parseYouTubeJson3(origRes, transRes);
-        if (parsed.length > 2) {
+        const isAsr = Boolean(
+          chosen?.kind === 'asr' ||
+          chosenVss.includes('asr') ||
+          chosenVss.startsWith('.a') ||
+          rawUrl.includes('kind=asr') ||
+          origRes.events.some(e => e.segs?.some(s => typeof s.tOffsetMs === 'number' && s.tOffsetMs > 0))
+        );
+        let parsed = parseYouTubeJson3(origRes, transRes, isAsr);
+        if (isAsr && parsed.length > 2) {
           parsed = assembleLongAsrSentences(parsed);
         }
 
@@ -553,12 +562,12 @@ export class YouTubeSubtitleSniffer {
           const hasAiRefinedCues = isSameVideo && currentCues.length > 0 && currentCues.some(c => c.isAiRefined || c.isMixedRefined || c.mixedPhrases !== undefined || c.tokens?.some(t => t.isKeyPhrase));
           const isIncomingSubstantiallyBigger = this.shouldAcceptNewCues(parsed, currentCues);
           if (hasAiRefinedCues && !isIncomingSubstantiallyBigger) {
-            console.log('[VocabFrame] Preserving existing AI-refined subtitles, keeping them in loadTracksUpfront.');
+            console.log('[Glean] Preserving existing AI-refined subtitles, keeping them in loadTracksUpfront.');
             this.cachedMainVideoId = videoId;
             return true;
           }
 
-          console.log(`[VocabFrame] Upfront preloaded ${parsed.length} full video cues for ${videoId}!`);
+          console.log(`[Glean] Upfront preloaded ${parsed.length} full video cues for ${videoId}!`);
           this.hasOfficialSubtitles = true;
           this.isLiveCaptionActive = false;
           this.cachedMainVideoCues = parsed;
@@ -594,7 +603,13 @@ export class YouTubeSubtitleSniffer {
             parsed = parseYouTubeXml(rawTxt);
           }
           if (parsed.length > 0) {
-            if (parsed.length > 2) {
+            const isAsr = Boolean(
+              chosen?.kind === 'asr' ||
+              chosenVss.includes('asr') ||
+              chosenVss.startsWith('.a') ||
+              rawUrl.includes('kind=asr')
+            );
+            if (isAsr && parsed.length > 2) {
               parsed = assembleLongAsrSentences(parsed);
             }
             const storeVid = useAppStore.getState().currentVideoId;
@@ -603,12 +618,12 @@ export class YouTubeSubtitleSniffer {
             const hasAiRefinedCues = isSameVideo && currentCues.length > 0 && currentCues.some(c => c.isAiRefined || c.isMixedRefined || c.mixedPhrases !== undefined || c.tokens?.some(t => t.isKeyPhrase));
             const isIncomingSubstantiallyBigger = this.shouldAcceptNewCues(parsed, currentCues);
             if (hasAiRefinedCues && !isIncomingSubstantiallyBigger) {
-              console.log('[VocabFrame] Preserving existing AI-refined subtitles, keeping them in loadTracksUpfront raw URL cues.');
+              console.log('[Glean] Preserving existing AI-refined subtitles, keeping them in loadTracksUpfront raw URL cues.');
               this.cachedMainVideoId = videoId;
               return true;
             }
 
-            console.log(`[VocabFrame] Upfront preloaded ${parsed.length} full video cues from raw URL for ${videoId}!`);
+            console.log(`[Glean] Upfront preloaded ${parsed.length} full video cues from raw URL for ${videoId}!`);
             this.hasOfficialSubtitles = true;
             this.isLiveCaptionActive = false;
             this.cachedMainVideoCues = parsed;
@@ -628,7 +643,7 @@ export class YouTubeSubtitleSniffer {
         }
       }
     } catch (err) {
-      console.warn('[VocabFrame] loadTracksUpfront error:', err);
+      console.warn('[Glean] loadTracksUpfront error:', err);
     }
     return false;
   }
@@ -660,7 +675,7 @@ export class YouTubeSubtitleSniffer {
     window.addEventListener('yt-navigate-finish', this.ytNavigateListener);
     window.addEventListener('popstate', this.ytNavigateListener);
 
-    console.log('[VocabFrame] YouTube Subtitle Sniffer active.');
+    console.log('[Glean] YouTube Subtitle Sniffer active.');
   }
 
   public getIsAdPlaying(): boolean {
@@ -681,7 +696,7 @@ export class YouTubeSubtitleSniffer {
 
     if (isAdNow) {
       // Transition: Main Video -> Ad (Pre-roll or Mid-roll)
-      console.log('[VocabFrame] YouTube ad started. Entering ad-aware sniffing mode.');
+      console.log('[Glean] YouTube ad started. Entering ad-aware sniffing mode.');
 
       // 1. Cache main video cues and title if loaded, so we can restore them post-ad
       const currentCues = useAppStore.getState().cues;
@@ -707,7 +722,7 @@ export class YouTubeSubtitleSniffer {
       }
     } else {
       // Transition: Ad -> Main Video (Post-Ad Return)
-      console.log('[VocabFrame] YouTube ad finished. Performing seamless post-ad transition.');
+      console.log('[Glean] YouTube ad finished. Performing seamless post-ad transition.');
 
       // 1. Clear any ad captions from store
       useAppStore.getState().setCues([]);
@@ -722,7 +737,7 @@ export class YouTubeSubtitleSniffer {
 
       // 2. Restore cached official bilingual subtitles if we have them for this video
       if (this.cachedMainVideoCues && this.cachedMainVideoCues.length > 0 && this.cachedMainVideoId === curVideoId) {
-        console.log(`[VocabFrame] Restoring ${this.cachedMainVideoCues.length} cached official cues post-ad.`);
+        console.log(`[Glean] Restoring ${this.cachedMainVideoCues.length} cached official cues post-ad.`);
         useAppStore.getState().setCues(this.cachedMainVideoCues);
         this.hasOfficialSubtitles = true;
         this.isLiveCaptionActive = false;
@@ -830,34 +845,39 @@ export class YouTubeSubtitleSniffer {
         const { content, transContent, format, trackName, url } = event.data;
         if (!content) return;
 
+        const isAsrFromMeta = Boolean(
+          (url && url.includes('kind=asr')) ||
+          (trackName && /auto-generated|自动生成|ASR/i.test(trackName))
+        );
+
         let parsedCues: SubtitleCue[] = [];
         if (transContent && (format === 'json3' || !format)) {
-          parsedCues = parseYouTubeJson3(content, transContent);
+          parsedCues = parseYouTubeJson3(content, transContent, isAsrFromMeta ? true : undefined);
         } else if (format === 'vtt' || (typeof content === 'string' && content.includes('WEBVTT'))) {
           parsedCues = parseSubtitleContent(content);
         } else if (typeof content === 'string' && (content.includes('<transcript') || content.includes('<timedtext'))) {
           parsedCues = parseYouTubeXml(content);
         } else {
-          parsedCues = parseYouTubeJson3(content);
+          parsedCues = parseYouTubeJson3(content, undefined, isAsrFromMeta ? true : undefined);
         }
 
-        // Intelligently assemble fragmented ASR cues into complete, coherent sentences like Language Reactor
-        if (parsedCues.length > 2) {
-          const isAsr = Boolean(
-            (url && (url.includes('kind=asr') || url.includes('fmt=json3'))) ||
-            (trackName && /auto-generated|自动生成|ASR/i.test(trackName)) ||
-            parsedCues.some(c => !/[.?!。？！]$/.test(c.textEn.trim()) && (c.end - c.start) < 4.0)
-          );
-          if (isAsr) {
-            parsedCues = assembleLongAsrSentences(parsedCues);
-          }
+        const isAsr = Boolean(
+          isAsrFromMeta ||
+          (parsedCues.length > 2 &&
+            !parsedCues.some(c => /[.?!。？！]$/.test((c.textEn || c.textZh || '').trim())) &&
+            parsedCues.some(c => (c.end - c.start) < 3.5))
+        );
+
+        // Intelligently assemble fragmented ASR cues into concise Language Reactor units
+        if (isAsr && parsedCues.length > 2) {
+          parsedCues = assembleLongAsrSentences(parsedCues);
         }
 
         if (parsedCues.length > 0) {
           const curVid = event.data.videoId || extractYouTubeVideoId(window.location.href);
           if (!curVid) return;
 
-          console.log(`[VocabFrame] Loaded official YouTube timedtext (${parsedCues.length} cues, bilingual: ${Boolean(transContent)}) for ${curVid}:`, url);
+          console.log(`[Glean] Loaded official YouTube timedtext (${parsedCues.length} cues, bilingual: ${Boolean(transContent)}) for ${curVid}:`, url);
 
           // If an ad is currently playing on YouTube:
           if (this.isAdCurrentlyPlaying || isYouTubeAdPlaying()) {
@@ -883,7 +903,7 @@ export class YouTubeSubtitleSniffer {
           const hasAiRefinedCues = isSameVideo && currentCues.length > 0 && currentCues.some(c => c.isAiRefined || c.isMixedRefined || c.mixedPhrases !== undefined || c.tokens?.some(t => t.isKeyPhrase));
           const isIncomingSubstantiallyBigger = this.shouldAcceptNewCues(parsedCues, currentCues);
           if (hasAiRefinedCues && !isIncomingSubstantiallyBigger) {
-            console.log('[VocabFrame] Preserving existing AI-refined subtitles, preventing overwrite in timedtext.');
+            console.log('[Glean] Preserving existing AI-refined subtitles, preventing overwrite in timedtext.');
             return;
           }
 
@@ -935,7 +955,7 @@ export class YouTubeSubtitleSniffer {
           scriptEl.onload = () => scriptEl.remove();
         }
       } catch (err) {
-        console.warn('[VocabFrame] Main World script safe injection deferred:', err);
+        console.warn('[Glean] Main World script safe injection deferred:', err);
       }
     }
 
@@ -1059,7 +1079,7 @@ export class YouTubeSubtitleSniffer {
         const isTimeRewind = this.lastAdCurrentTime > 2.5 && currentTime < 1.0;
 
         if (isBadgePodChange || isTimeRewind) {
-          console.log('[VocabFrame] Dual-ad pod transition detected. Clearing previous ad cues.');
+          console.log('[Glean] Dual-ad pod transition detected. Clearing previous ad cues.');
           useAppStore.getState().setCues([]);
           this.isLiveCaptionActive = false;
           this.lastCapturedText = '';
@@ -1225,7 +1245,7 @@ export class YouTubeSubtitleSniffer {
                 .then(r => r.text())
                 .then(txt => {
                   if (txt && isValidSubtitleText(txt.slice(0, 100))) {
-                    useAppStore.getState().loadSubtitleFileContent(txt);
+                    useAppStore.getState().loadSubtitleFileContent(txt, undefined, false);
                   }
                 })
                 .catch(() => {});
@@ -1262,13 +1282,19 @@ export class YouTubeSubtitleSniffer {
       let textZh = '';
 
       if (lines.length === 1) {
-        textEn = lines[0];
-        textZh = '';
+        const line = lines[0];
+        if (isChineseText(line)) {
+          textZh = line;
+          textEn = '';
+        } else {
+          textEn = line;
+          textZh = '';
+        }
       } else if (lines.length >= 2) {
         const line1 = lines[0];
         const line2 = lines.slice(1).join(' ');
-        const hasChinese1 = /[\u4e00-\u9fff\u3040-\u30ff\u3400-\u4dbf]/.test(line1);
-        const hasChinese2 = /[\u4e00-\u9fff\u3040-\u30ff\u3400-\u4dbf]/.test(line2);
+        const hasChinese1 = isChineseText(line1);
+        const hasChinese2 = isChineseText(line2);
 
         if (!hasChinese1 && hasChinese2) {
           textEn = line1;
@@ -1278,11 +1304,12 @@ export class YouTubeSubtitleSniffer {
           textZh = line1;
         } else {
           if (hasChinese1 && hasChinese2) {
-            textEn = `${line1}${line2}`.trim();
+            textEn = '';
+            textZh = `${line1}${line2}`.trim();
           } else {
             textEn = `${line1} ${line2}`.replace(/\s+/g, ' ').trim();
+            textZh = '';
           }
-          textZh = '';
         }
       }
 
@@ -1290,8 +1317,8 @@ export class YouTubeSubtitleSniffer {
         id: i + 1,
         start: cue.startTime,
         end: cue.endTime,
-        textEn: textEn || cleaned,
-        textZh: textZh || ''
+        textEn,
+        textZh
       });
     }
 
@@ -1299,7 +1326,7 @@ export class YouTubeSubtitleSniffer {
     if (sanitized.length > 2) {
       const isAsr = Boolean(
         (track.label && /auto-generated|自动生成|ASR/i.test(track.label)) ||
-        sanitized.some(c => !/[.?!。？！]$/.test(c.textEn.trim()) && (c.end - c.start) < 4.0)
+        (!sanitized.some(c => /[.?!。？！]$/.test((c.textEn || c.textZh || '').trim())) && sanitized.some(c => (c.end - c.start) < 3.5))
       );
       if (isAsr) {
         sanitized = assembleLongAsrSentences(sanitized);
@@ -1316,12 +1343,13 @@ export class YouTubeSubtitleSniffer {
       const currentCues = useAppStore.getState().cues;
       const isSameVideo = this.cachedMainVideoId === curVid && (!storeVid || storeVid === curVid);
       const isIncomingSubstantiallyBigger = this.shouldAcceptNewCues(sanitized, currentCues);
+      const hasAiRefinedCues = isSameVideo && currentCues.length > 0 && currentCues.some(c => c.isAiRefined || c.isMixedRefined || c.mixedPhrases !== undefined || c.tokens?.some(t => t.isKeyPhrase));
       if (hasAiRefinedCues && !isIncomingSubstantiallyBigger) {
-        console.log('[VocabFrame] Preserving existing AI-refined subtitles, preventing overwrite by raw textTrack.');
+        console.log('[Glean] Preserving existing AI-refined subtitles, preventing overwrite by raw textTrack.');
         return;
       }
 
-      console.log(`[VocabFrame] Extracted ${sanitized.length} cues from YouTube textTrack for ${curVid}!`);
+      console.log(`[Glean] Extracted ${sanitized.length} cues from YouTube textTrack for ${curVid}!`);
       this.hasOfficialSubtitles = true;
       this.isLiveCaptionActive = false;
       this.cachedMainVideoCues = sanitized;

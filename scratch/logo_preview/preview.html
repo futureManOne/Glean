@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Glean (拾句) Logo 优化方案对比</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #0b0f17; color: #f1f5f9; padding: 32px; }
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: #38bdf8; }
+    p.subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 32px; }
+    
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 40px; }
+    .card { background: #131b26; border: 1px solid #1e293b; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; align-items: center; }
+    .card.highlight { border-color: #0284c7; box-shadow: 0 0 24px rgba(2, 132, 199, 0.2); }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; margin-bottom: 12px; font-weight: 600; }
+    .badge.orig { background: #334155; color: #cbd5e1; }
+    .badge.cand { background: #0369a1; color: #e0f2fe; }
+    .badge.rec { background: #059669; color: #d1fae5; }
+    
+    .logo-container { width: 128px; height: 128px; margin: 16px 0; }
+    .logo-container svg { width: 100%; height: 100%; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5)); }
+    
+    .card-title { font-size: 16px; font-weight: 600; margin-top: 8px; color: #f8fafc; }
+    .card-desc { font-size: 12px; color: #94a3b8; margin-top: 8px; text-align: center; line-height: 1.5; }
+
+    /* Browser Extension Simulation Bar */
+    .section-title { font-size: 18px; font-weight: 600; margin: 32px 0 16px; color: #e2e8f0; }
+    
+    .mockup-row { display: flex; gap: 24px; margin-bottom: 24px; }
+    .mockup-box { flex: 1; padding: 20px; border-radius: 14px; border: 1px solid #334155; }
+    .mockup-dark { background: #202124; }
+    .mockup-light { background: #f1f3f4; color: #202124; }
+    
+    .toolbar-sim { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-radius: 10px; background: rgba(0,0,0,0.25); }
+    .mockup-light .toolbar-sim { background: rgba(255,255,255,0.7); border: 1px solid #dadce0; }
+    .toolbar-item { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; }
+    .mockup-dark .toolbar-item { color: #9aa0a6; }
+    .mockup-light .toolbar-item { color: #5f6368; }
+    
+    .toolbar-item svg { width: 24px; height: 24px; }
+    .toolbar-item.small svg { width: 16px; height: 16px; }
+
+    .diff-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+    .diff-table th, .diff-table td { padding: 12px 16px; border: 1px solid #1e293b; text-align: left; }
+    .diff-table th { background: #16202c; color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <h1>Glean (拾句) Logo 优化方案全景对比</h1>
+  <p class="subtitle">针对原版在暗色模式下轮廓模糊、无边缘高光、细节平淡的问题进行专业级升级与多尺寸适配测试</p>
+
+  <div class="grid">
+    <!-- Original -->
+    <div class="card">
+      <span class="badge orig">当前原版</span>
+      <div class="logo-container">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="24" fill="#111719"/>
+  <path d="M31 37V27h18M79 27h18v10M97 91v10H79M49 101H31V91" fill="none" stroke="#52d6c7" stroke-width="9" stroke-linecap="round"/>
+  <path d="M42 54h44M42 72h31" fill="none" stroke="#f4f7f6" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="87" cy="75" r="8" fill="#f2c14e"/>
+</svg>
+      </div>
+      <div class="card-title">原版设计</div>
+      <div class="card-desc">纯黑底色 #111719，直角无倒角线段，平涂黄点。在暗色浏览器工具栏中几乎融为一体看不清轮廓。</div>
+    </div>
+
+    <!-- Candidate 1 -->
+    <div class="card highlight">
+      <span class="badge rec">方案 1 · 质感升华版 (强烈推荐)</span>
+      <div class="logo-container">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c1-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182230" />
+      <stop offset="50%" stop-color="#0f1724" />
+      <stop offset="100%" stop-color="#080d15" />
+    </linearGradient>
+    <linearGradient id="c1-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.3)" />
+      <stop offset="40%" stop-color="rgba(56, 189, 248, 0.2)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+    </linearGradient>
+    <linearGradient id="c1-bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <radialGradient id="c1-glow" cx="64" cy="64" r="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.22" />
+      <stop offset="70%" stop-color="#06b6d4" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="c1-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <filter id="c1-star-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base container with rim highlight -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c1-bg)" stroke="url(#c1-rim)" stroke-width="2.5" />
+  
+  <!-- Soft ambient radiance -->
+  <circle cx="64" cy="64" r="54" fill="url(#c1-glow)" />
+
+  <!-- High-precision viewfinder brackets (curved fillets) -->
+  <g fill="none" stroke="url(#c1-bracket)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top-Left -->
+    <path d="M 28 42 V 34 C 28 30 30 28 34 28 H 48" />
+    <!-- Top-Right -->
+    <path d="M 80 28 H 94 C 98 28 100 30 100 34 V 42" />
+    <!-- Bottom-Left -->
+    <path d="M 28 86 V 94 C 28 98 30 100 34 100 H 48" />
+    <!-- Bottom-Right -->
+    <path d="M 80 100 H 94 C 98 100 100 98 100 94 V 86" />
+  </g>
+
+  <!-- Bilingual subtitle bars -->
+  <!-- Top line: Crisp primary subtitle -->
+  <line x1="41" y1="53" x2="87" y2="53" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <!-- Bottom line: Second language bar -->
+  <line x1="41" y1="73" x2="71" y2="73" stroke="#93c5fd" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Glean Spark of Insight (拾句灵感之星) -->
+  <g filter="url(#c1-star-glow)">
+    <path d="M 88 64 Q 88 73 97 73 Q 88 73 88 82 Q 88 73 79 73 Q 88 73 88 64 Z" fill="url(#c1-gold)" />
+    <circle cx="88" cy="73" r="2.5" fill="#ffffff" />
+  </g>
+</svg>
+      </div>
+      <div class="card-title">光影高光视窗</div>
+      <div class="card-desc">保留原有“视频嗅探框+双语字幕+拾句之星”DNA，增加星空深蓝渐变、精致圆弧导角与超细高反差边缘光，四角星光芒点缀，在黑底与白底下都极其醒目！</div>
+    </div>
+
+    <!-- Candidate 2 -->
+    <div class="card">
+      <span class="badge cand">方案 2 · 极简品牌标</span>
+      <div class="logo-container">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c2-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="c2-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(56, 189, 248, 0.4)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+    </linearGradient>
+    <linearGradient id="c2-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="60%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="c2-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <radialGradient id="c2-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c2-bg)" stroke="url(#c2-rim)" stroke-width="2.5" />
+  <circle cx="64" cy="64" r="52" fill="url(#c2-glow)" />
+
+  <!-- Iconic G contour composed of dynamic fluid curves -->
+  <path d="M 88 40 C 76 26 50 26 38 38 C 24 52 24 76 38 90 C 50 102 76 102 88 88 C 94 81 96 74 96 66 L 60 66" 
+        fill="none" 
+        stroke="url(#c2-g)" 
+        stroke-width="11" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- Upper subtitle accent -->
+  <line x1="48" y1="50" x2="76" y2="50" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" opacity="0.95" />
+
+  <!-- Golden Spark of Insight in the center-right notch -->
+  <circle cx="86" cy="66" r="6" fill="url(#c2-gold)" />
+</svg>
+      </div>
+      <div class="card-title">流体 G 标</div>
+      <div class="card-desc">以字母 G 为主骨骼，融合视频取景框曲线、中心双语字幕条与金色播放/灵感圆点，极简现代，极小尺寸下辨识度最高。</div>
+    </div>
+
+    <!-- Candidate 3 -->
+    <div class="card">
+      <span class="badge cand">方案 3 · 活力外框版</span>
+      <div class="logo-container">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c3-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="c3-inner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.88" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0.94" />
+    </linearGradient>
+    <linearGradient id="c3-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Vibrant gradient container with inner depth -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c3-bg)" />
+  <rect x="11" y="11" width="106" height="106" rx="22" fill="url(#c3-inner)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+
+  <!-- Viewfinder corners in crisp white/cyan -->
+  <g fill="none" stroke="#38bdf8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 27 40 V 33 C 27 30 30 27 33 27 H 46" />
+    <path d="M 82 27 H 95 C 98 27 101 30 101 33 V 40" />
+    <path d="M 27 88 V 95 C 27 98 30 101 33 101 H 46" />
+    <path d="M 82 101 H 95 C 98 101 101 98 101 95 V 88" />
+  </g>
+
+  <!-- Subtitle lines -->
+  <line x1="39" y1="54" x2="89" y2="54" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <line x1="39" y1="74" x2="69" y2="74" stroke="#67e8f9" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Glowing Golden Star -->
+  <path d="M 86 65 Q 86 74 95 74 Q 86 74 86 83 Q 86 74 77 74 Q 86 74 86 65 Z" fill="url(#c3-gold)" />
+</svg>
+      </div>
+      <div class="card-title">双层渐变外框</div>
+      <div class="card-desc">采用青绿渐变超亮外框配合暗色内视窗，彻底解决暗色浏览器下被吞没的痛点，视觉冲击力强。</div>
+    </div>
+  </div>
+
+  <div class="section-title">真实浏览器工具栏视觉模拟 (24px / 16px 极限清晰度检验)</div>
+  <div class="mockup-row">
+    <!-- Dark Mode Simulation -->
+    <div class="mockup-box mockup-dark">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #e8eaed;">Chrome 暗色工具栏 (#202124) 模拟</div>
+      <div class="toolbar-sim">
+        <div class="toolbar-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="24" fill="#111719"/>
+  <path d="M31 37V27h18M79 27h18v10M97 91v10H79M49 101H31V91" fill="none" stroke="#52d6c7" stroke-width="9" stroke-linecap="round"/>
+  <path d="M42 54h44M42 72h31" fill="none" stroke="#f4f7f6" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="87" cy="75" r="8" fill="#f2c14e"/>
+</svg>
+          <span>原版</span>
+        </div>
+        <div style="width: 1px; height: 28px; background: #3c4043;"></div>
+        <div class="toolbar-item" style="color: #38bdf8; font-weight: 600;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c1-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182230" />
+      <stop offset="50%" stop-color="#0f1724" />
+      <stop offset="100%" stop-color="#080d15" />
+    </linearGradient>
+    <linearGradient id="c1-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.3)" />
+      <stop offset="40%" stop-color="rgba(56, 189, 248, 0.2)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+    </linearGradient>
+    <linearGradient id="c1-bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <radialGradient id="c1-glow" cx="64" cy="64" r="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.22" />
+      <stop offset="70%" stop-color="#06b6d4" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="c1-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <filter id="c1-star-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base container with rim highlight -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c1-bg)" stroke="url(#c1-rim)" stroke-width="2.5" />
+  
+  <!-- Soft ambient radiance -->
+  <circle cx="64" cy="64" r="54" fill="url(#c1-glow)" />
+
+  <!-- High-precision viewfinder brackets (curved fillets) -->
+  <g fill="none" stroke="url(#c1-bracket)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top-Left -->
+    <path d="M 28 42 V 34 C 28 30 30 28 34 28 H 48" />
+    <!-- Top-Right -->
+    <path d="M 80 28 H 94 C 98 28 100 30 100 34 V 42" />
+    <!-- Bottom-Left -->
+    <path d="M 28 86 V 94 C 28 98 30 100 34 100 H 48" />
+    <!-- Bottom-Right -->
+    <path d="M 80 100 H 94 C 98 100 100 98 100 94 V 86" />
+  </g>
+
+  <!-- Bilingual subtitle bars -->
+  <!-- Top line: Crisp primary subtitle -->
+  <line x1="41" y1="53" x2="87" y2="53" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <!-- Bottom line: Second language bar -->
+  <line x1="41" y1="73" x2="71" y2="73" stroke="#93c5fd" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Glean Spark of Insight (拾句灵感之星) -->
+  <g filter="url(#c1-star-glow)">
+    <path d="M 88 64 Q 88 73 97 73 Q 88 73 88 82 Q 88 73 79 73 Q 88 73 88 64 Z" fill="url(#c1-gold)" />
+    <circle cx="88" cy="73" r="2.5" fill="#ffffff" />
+  </g>
+</svg>
+          <span>方案1 (推荐)</span>
+        </div>
+        <div class="toolbar-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c2-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="c2-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(56, 189, 248, 0.4)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+    </linearGradient>
+    <linearGradient id="c2-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="60%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="c2-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <radialGradient id="c2-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c2-bg)" stroke="url(#c2-rim)" stroke-width="2.5" />
+  <circle cx="64" cy="64" r="52" fill="url(#c2-glow)" />
+
+  <!-- Iconic G contour composed of dynamic fluid curves -->
+  <path d="M 88 40 C 76 26 50 26 38 38 C 24 52 24 76 38 90 C 50 102 76 102 88 88 C 94 81 96 74 96 66 L 60 66" 
+        fill="none" 
+        stroke="url(#c2-g)" 
+        stroke-width="11" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- Upper subtitle accent -->
+  <line x1="48" y1="50" x2="76" y2="50" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" opacity="0.95" />
+
+  <!-- Golden Spark of Insight in the center-right notch -->
+  <circle cx="86" cy="66" r="6" fill="url(#c2-gold)" />
+</svg>
+          <span>方案2</span>
+        </div>
+        <div class="toolbar-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c3-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="c3-inner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.88" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0.94" />
+    </linearGradient>
+    <linearGradient id="c3-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Vibrant gradient container with inner depth -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c3-bg)" />
+  <rect x="11" y="11" width="106" height="106" rx="22" fill="url(#c3-inner)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+
+  <!-- Viewfinder corners in crisp white/cyan -->
+  <g fill="none" stroke="#38bdf8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 27 40 V 33 C 27 30 30 27 33 27 H 46" />
+    <path d="M 82 27 H 95 C 98 27 101 30 101 33 V 40" />
+    <path d="M 27 88 V 95 C 27 98 30 101 33 101 H 46" />
+    <path d="M 82 101 H 95 C 98 101 101 98 101 95 V 88" />
+  </g>
+
+  <!-- Subtitle lines -->
+  <line x1="39" y1="54" x2="89" y2="54" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <line x1="39" y1="74" x2="69" y2="74" stroke="#67e8f9" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Glowing Golden Star -->
+  <path d="M 86 65 Q 86 74 95 74 Q 86 74 86 83 Q 86 74 77 74 Q 86 74 86 65 Z" fill="url(#c3-gold)" />
+</svg>
+          <span>方案3</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Light Mode Simulation -->
+    <div class="mockup-box mockup-light">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Chrome 浅色工具栏 (#F1F3F4) 模拟</div>
+      <div class="toolbar-sim">
+        <div class="toolbar-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="24" fill="#111719"/>
+  <path d="M31 37V27h18M79 27h18v10M97 91v10H79M49 101H31V91" fill="none" stroke="#52d6c7" stroke-width="9" stroke-linecap="round"/>
+  <path d="M42 54h44M42 72h31" fill="none" stroke="#f4f7f6" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="87" cy="75" r="8" fill="#f2c14e"/>
+</svg>
+          <span>原版</span>
+        </div>
+        <div style="width: 1px; height: 28px; background: #dadce0;"></div>
+        <div class="toolbar-item" style="color: #0284c7; font-weight: 600;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c1-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182230" />
+      <stop offset="50%" stop-color="#0f1724" />
+      <stop offset="100%" stop-color="#080d15" />
+    </linearGradient>
+    <linearGradient id="c1-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.3)" />
+      <stop offset="40%" stop-color="rgba(56, 189, 248, 0.2)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+    </linearGradient>
+    <linearGradient id="c1-bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <radialGradient id="c1-glow" cx="64" cy="64" r="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.22" />
+      <stop offset="70%" stop-color="#06b6d4" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="c1-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <filter id="c1-star-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base container with rim highlight -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c1-bg)" stroke="url(#c1-rim)" stroke-width="2.5" />
+  
+  <!-- Soft ambient radiance -->
+  <circle cx="64" cy="64" r="54" fill="url(#c1-glow)" />
+
+  <!-- High-precision viewfinder brackets (curved fillets) -->
+  <g fill="none" stroke="url(#c1-bracket)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top-Left -->
+    <path d="M 28 42 V 34 C 28 30 30 28 34 28 H 48" />
+    <!-- Top-Right -->
+    <path d="M 80 28 H 94 C 98 28 100 30 100 34 V 42" />
+    <!-- Bottom-Left -->
+    <path d="M 28 86 V 94 C 28 98 30 100 34 100 H 48" />
+    <!-- Bottom-Right -->
+    <path d="M 80 100 H 94 C 98 100 100 98 100 94 V 86" />
+  </g>
+
+  <!-- Bilingual subtitle bars -->
+  <!-- Top line: Crisp primary subtitle -->
+  <line x1="41" y1="53" x2="87" y2="53" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <!-- Bottom line: Second language bar -->
+  <line x1="41" y1="73" x2="71" y2="73" stroke="#93c5fd" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Glean Spark of Insight (拾句灵感之星) -->
+  <g filter="url(#c1-star-glow)">
+    <path d="M 88 64 Q 88 73 97 73 Q 88 73 88 82 Q 88 73 79 73 Q 88 73 88 64 Z" fill="url(#c1-gold)" />
+    <circle cx="88" cy="73" r="2.5" fill="#ffffff" />
+  </g>
+</svg>
+          <span>方案1 (推荐)</span>
+        </div>
+        <div class="toolbar-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c2-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="c2-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(56, 189, 248, 0.4)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+    </linearGradient>
+    <linearGradient id="c2-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="60%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="c2-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <radialGradient id="c2-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c2-bg)" stroke="url(#c2-rim)" stroke-width="2.5" />
+  <circle cx="64" cy="64" r="52" fill="url(#c2-glow)" />
+
+  <!-- Iconic G contour composed of dynamic fluid curves -->
+  <path d="M 88 40 C 76 26 50 26 38 38 C 24 52 24 76 38 90 C 50 102 76 102 88 88 C 94 81 96 74 96 66 L 60 66" 
+        fill="none" 
+        stroke="url(#c2-g)" 
+        stroke-width="11" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- Upper subtitle accent -->
+  <line x1="48" y1="50" x2="76" y2="50" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" opacity="0.95" />
+
+  <!-- Golden Spark of Insight in the center-right notch -->
+  <circle cx="86" cy="66" r="6" fill="url(#c2-gold)" />
+</svg>
+          <span>方案2</span>
+        </div>
+        <div class="toolbar-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c3-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="c3-inner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.88" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0.94" />
+    </linearGradient>
+    <linearGradient id="c3-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Vibrant gradient container with inner depth -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c3-bg)" />
+  <rect x="11" y="11" width="106" height="106" rx="22" fill="url(#c3-inner)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+
+  <!-- Viewfinder corners in crisp white/cyan -->
+  <g fill="none" stroke="#38bdf8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 27 40 V 33 C 27 30 30 27 33 27 H 46" />
+    <path d="M 82 27 H 95 C 98 27 101 30 101 33 V 40" />
+    <path d="M 27 88 V 95 C 27 98 30 101 33 101 H 46" />
+    <path d="M 82 101 H 95 C 98 101 101 98 101 95 V 88" />
+  </g>
+
+  <!-- Subtitle lines -->
+  <line x1="39" y1="54" x2="89" y2="54" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <line x1="39" y1="74" x2="69" y2="74" stroke="#67e8f9" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Glowing Golden Star -->
+  <path d="M 86 65 Q 86 74 95 74 Q 86 74 86 83 Q 86 74 77 74 Q 86 74 86 65 Z" fill="url(#c3-gold)" />
+</svg>
+          <span>方案3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

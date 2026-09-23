@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c3-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="c3-inner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.88" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0.94" />
+    </linearGradient>
+    <linearGradient id="c3-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Vibrant gradient container with inner depth -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c3-bg)" />
+  <rect x="11" y="11" width="106" height="106" rx="22" fill="url(#c3-inner)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+
+  <!-- Viewfinder corners in crisp white/cyan -->
+  <g fill="none" stroke="#38bdf8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 27 40 V 33 C 27 30 30 27 33 27 H 46" />
+    <path d="M 82 27 H 95 C 98 27 101 30 101 33 V 40" />
+    <path d="M 27 88 V 95 C 27 98 30 101 33 101 H 46" />
+    <path d="M 82 101 H 95 C 98 101 101 98 101 95 V 88" />
+  </g>
+
+  <!-- Subtitle lines -->
+  <line x1="39" y1="54" x2="89" y2="54" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <line x1="39" y1="74" x2="69" y2="74" stroke="#67e8f9" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Glowing Golden Star -->
+  <path d="M 86 65 Q 86 74 95 74 Q 86 74 86 83 Q 86 74 77 74 Q 86 74 86 65 Z" fill="url(#c3-gold)" />
+</svg>

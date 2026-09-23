@@ -362,15 +362,16 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
       if (files && files.length > 0) {
         const file = files[0];
         const lowerName = file.name.toLowerCase();
-        if (lowerName.endsWith('.srt') || lowerName.endsWith('.vtt') || lowerName.endsWith('.ass') || lowerName.endsWith('.txt')) {
+        const SUB_EXTS = ['.srt', '.vtt', '.ass', '.ssa', '.lrc', '.sub', '.ttml', '.xml', '.json', '.bcc', '.txt'];
+        if (SUB_EXTS.some(ext => lowerName.endsWith(ext))) {
           const reader = new FileReader();
           reader.onload = (event) => {
-            const text = event.target?.result as string;
-            if (text) {
-              loadSubtitleFileContent(text, file.name);
+            const buffer = event.target?.result as ArrayBuffer;
+            if (buffer) {
+              loadSubtitleFileContent(buffer, file.name);
             }
           };
-          reader.readAsText(file);
+          reader.readAsArrayBuffer(file);
         }
       }
     };

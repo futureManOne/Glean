@@ -22,7 +22,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error(`[VocabFrame][${this.props.name || 'Component'}] Caught error:`, error, errorInfo);
+    console.error(`[Glean][${this.props.name || 'Component'}] Caught error:`, error, errorInfo);
   }
 
   render() {

@@ -90,9 +90,7 @@ const App: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-[#2e2e38]">
         <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-blue-600/20">
-            G
-          </div>
+          <img src="/icon/32.png" alt="Glean Logo" className="w-7 h-7 rounded-lg shadow-md shadow-cyan-900/30 object-contain" />
           <div>
             <h1 className="font-bold text-sm text-gray-100">{t.appName}</h1>
             <p className="text-[10px] text-gray-400">{t.appSubtitle}</p>

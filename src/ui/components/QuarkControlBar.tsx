@@ -18,6 +18,8 @@ export const QuarkControlBar: React.FC<QuarkControlBarProps> = ({ player, videoR
     repeatMode,
     setRepeatMode,
     loadSubtitleFileContent,
+    detectedFolderSubtitles,
+    loadDetectedFolderSubtitle,
     loadDemoSubtitles,
     settings,
     updateSettings,
@@ -50,7 +52,7 @@ export const QuarkControlBar: React.FC<QuarkControlBarProps> = ({ player, videoR
     if (!isEmbedded) return;
     // An isolated host participates in the native control bar's layout and auto-hide.
     const host = document.createElement('language-reactor-overlay');
-    host.dataset.vocabframeControlsHost = 'true';
+    host.dataset.gleanControlsHost = 'true';
     if (isBilibili) {
       host.className = 'bpx-player-ctrl-btn';
       host.style.marginRight = '12px';
@@ -151,11 +153,11 @@ export const QuarkControlBar: React.FC<QuarkControlBarProps> = ({ player, videoR
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const text = reader.result as string;
-      if (text) loadSubtitleFileContent(text, file.name);
+      const buffer = reader.result as ArrayBuffer;
+      if (buffer) loadSubtitleFileContent(buffer, file.name);
       setShowLoadMenu(false);
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const handleManualSniff = () => {
@@ -179,7 +181,7 @@ export const QuarkControlBar: React.FC<QuarkControlBarProps> = ({ player, videoR
       onPointerDown={event => event.stopPropagation()}
       onPointerUp={event => event.stopPropagation()}
       onKeyDown={event => event.stopPropagation()}
-      data-vocabframe-native-control="true"
+      data-glean-native-control="true"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -299,13 +301,38 @@ export const QuarkControlBar: React.FC<QuarkControlBarProps> = ({ player, videoR
   ) : null;
 
   const toolbar = (
-    <div data-vocabframe-toolbar className="flex flex-wrap items-center gap-2 text-xs text-gray-200">
-      <div className="flex items-center space-x-1.5 border-r border-white/15 pr-2.5 font-bold text-cyan-300"><Sparkles size={16} /><span>VocabFrame</span></div>
+    <div data-glean-toolbar className="flex flex-wrap items-center gap-2 text-xs text-gray-200">
+      <div className="flex items-center space-x-1.5 border-r border-white/15 pr-2.5 font-bold text-cyan-300"><Sparkles size={16} /><span>Glean 拾句</span></div>
       <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${cues.length ? 'border-emerald-500/30 bg-emerald-950/60 text-emerald-400' : 'border-gray-700/30 bg-gray-900/60 text-gray-400'}`}>{cues.length ? `${cues.length} 句字幕` : '无字幕'}</span>
       <div className="relative">
         <button type="button" onClick={() => setShowLoadMenu(!showLoadMenu)} className="flex items-center space-x-1.5 rounded-md px-2 py-1.5 font-medium text-gray-200 transition-colors hover:bg-white/10"><Upload size={14} /><span>{t.controlBar.subtitleSource}</span></button>
-        {showLoadMenu && <div className="absolute left-0 top-9 z-[100000] w-52 space-y-1 rounded-xl border border-[#383842] bg-[#1f1f24] p-1.5 shadow-2xl"><button type="button" onClick={handleManualSniff} className="flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-emerald-300 hover:bg-blue-600/30"><ScanText size={14} /><span>{sniffLabel}</span></button><button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-gray-200 hover:bg-blue-600/30"><Upload size={14} /><span>{t.controlBar.importLocal}</span></button><button type="button" onClick={() => { loadDemoSubtitles(); setShowLoadMenu(false); }} className="flex w-full items-center space-x-2 rounded-lg border-t border-[#383842]/50 px-2.5 pb-2 pt-2 text-left text-xs font-medium text-gray-200 hover:bg-blue-600/30"><CheckCircle2 size={14} className="text-amber-400" /><span>{t.controlBar.loadDemo}</span></button></div>}
-        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".srt,.vtt,.ass,.txt" className="hidden" />
+        {showLoadMenu && (
+          <div className="absolute left-0 top-9 z-[100000] w-56 space-y-1 rounded-xl border border-[#383842] bg-[#1f1f24] p-1.5 shadow-2xl">
+            {detectedFolderSubtitles && detectedFolderSubtitles.length > 0 && (
+              <div className="border-b border-[#383842]/70 pb-1 mb-1">
+                <div className="px-2 py-1 text-[10px] font-semibold text-cyan-400">发现网盘同目录字幕</div>
+                {detectedFolderSubtitles.map((sub, sIdx) => (
+                  <button
+                    key={sIdx}
+                    type="button"
+                    onClick={() => {
+                      loadDetectedFolderSubtitle(sub);
+                      setShowLoadMenu(false);
+                    }}
+                    className="flex w-full items-center justify-between space-x-1.5 rounded-lg px-2 py-1.5 text-left text-xs font-medium text-cyan-300 hover:bg-cyan-950/60 transition-colors"
+                  >
+                    <span className="truncate max-w-[140px]" title={sub.name}>{sub.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-cyan-600/80 text-white rounded shrink-0">载入</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button type="button" onClick={handleManualSniff} className="flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-emerald-300 hover:bg-blue-600/30"><ScanText size={14} /><span>{sniffLabel}</span></button>
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full items-center space-x-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-gray-200 hover:bg-blue-600/30"><Upload size={14} /><span>{t.controlBar.importLocal}</span></button>
+            <button type="button" onClick={() => { loadDemoSubtitles(); setShowLoadMenu(false); }} className="flex w-full items-center space-x-2 rounded-lg border-t border-[#383842]/50 px-2.5 pb-2 pt-2 text-left text-xs font-medium text-gray-200 hover:bg-blue-600/30"><CheckCircle2 size={14} className="text-amber-400" /><span>{t.controlBar.loadDemo}</span></button>
+          </div>
+        )}
+        <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".srt,.vtt,.ass,.ssa,.lrc,.sub,.ttml,.xml,.json,.bcc,.txt" className="hidden" />
       </div>
       <button type="button" onClick={() => setRepeatMode(!repeatMode)} className={`flex items-center space-x-1.5 rounded-md px-2 py-1.5 font-medium transition-colors ${repeatMode ? 'border border-amber-500/50 bg-amber-600/40 text-amber-300' : 'text-gray-300 hover:bg-white/10'}`} title="单句循环跟读模式"><Repeat size={14} /><span>{t.sentenceAnalysis.loopSentence}</span></button>
       <button type="button" onClick={toggleSubtitleVisibility} className={`flex items-center space-x-1.5 rounded-md px-2 py-1.5 font-medium transition-colors ${settings.subtitleMode === 'hidden' ? 'border border-rose-500/50 bg-rose-950/70 text-rose-300' : 'text-emerald-400 hover:bg-white/10'}`} title="切换字幕显示">{settings.subtitleMode === 'hidden' ? <EyeOff size={14} /> : <Eye size={14} />}<span>{settings.subtitleMode === 'hidden' ? t.controlBar.showSubtitle : t.controlBar.hideSubtitle}</span></button>

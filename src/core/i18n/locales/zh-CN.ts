@@ -72,6 +72,8 @@ export const zhCN = {
     mixedGlossDensityLow: '轻度精要 (1-2 词)',
     mixedGlossDensityMedium: '标准均衡 (2-4 词)',
     mixedGlossDensityHigh: '密集全量 (4-8+ 词)',
+    mixedModeShowTranslation: '显示整句中文翻译',
+    mixedModeShowTranslationDesc: '在混合行下方额外显示整句中文译文；关闭后仅保留英文原句与行内重点释义，画面更清爽沉浸。',
     maskModeLabel: '听力磨砂遮罩模式 (脱离字幕磨耳朵)',
     maskModeDesc: '翻译字幕默认虚化模糊，鼠标悬停时清晰显示',
     subtitleOpacity: '字幕卡片背景不透明度:'

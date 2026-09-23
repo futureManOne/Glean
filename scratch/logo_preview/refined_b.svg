@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="rb-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182232" />
+      <stop offset="50%" stop-color="#0e1724" />
+      <stop offset="100%" stop-color="#060a10" />
+    </linearGradient>
+    <linearGradient id="rb-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.45)" />
+      <stop offset="40%" stop-color="rgba(56, 189, 248, 0.35)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.08)" />
+    </linearGradient>
+    <linearGradient id="rb-bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <radialGradient id="rb-gem" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="30%" stop-color="#fde047" />
+      <stop offset="70%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </radialGradient>
+    <radialGradient id="rb-gem-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect x="3.5" y="3.5" width="121" height="121" rx="27" fill="url(#rb-bg)" stroke="url(#rb-rim)" stroke-width="2.5" />
+  
+  <g fill="none" stroke="url(#rb-bracket)" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 28 42 V 34 C 28 29.5 30.5 27 35 27 H 48" />
+    <path d="M 80 27 H 93 C 97.5 27 100 29.5 100 34 V 42" />
+    <path d="M 28 86 V 94 C 28 98.5 30.5 101 35 101 H 48" />
+    <path d="M 80 101 H 93 C 97.5 101 100 98.5 100 94 V 86" />
+  </g>
+
+  <!-- Subtitle lines -->
+  <line x1="41" y1="52.5" x2="87" y2="52.5" stroke="#ffffff" stroke-width="9" stroke-linecap="round" />
+  <line x1="41" y1="73.5" x2="68" y2="73.5" stroke="#7dd3fc" stroke-width="9" stroke-linecap="round" />
+
+  <!-- Luminous Gem with Outer Aura -->
+  <circle cx="86.5" cy="73.5" r="14" fill="url(#rb-gem-glow)" />
+  <circle cx="86.5" cy="73.5" r="8" fill="url(#rb-gem)" />
+  <circle cx="84.5" cy="71.5" r="2.5" fill="#ffffff" opacity="0.8" />
+</svg>

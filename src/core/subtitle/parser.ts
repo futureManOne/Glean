@@ -41,24 +41,110 @@ export function formatTimestamp(seconds: number): string {
 }
 
 /**
- * Detect whether a string contains Chinese, Japanese Kanji, or CJK ideographs
+ * Detect whether a string contains CJK ideographs, Japanese Kana, or Korean Hangul
  */
 export function isCjkText(text: string): boolean {
   if (!text) return false;
-  return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(text);
+  return /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/.test(text);
 }
 
 /**
- * Clean ASS/SSA tags (e.g. {\pos(100,200)}, {\c&H00FFFF&}, {\fad(200,200)}, \N)
+ * Detect whether a string contains Chinese Hanzi specifically (excluding Japanese Kana and Korean Hangul)
+ */
+export function isChineseText(text: string): boolean {
+  if (!text) return false;
+  return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(text) && !/[\u3040-\u30ff\uac00-\ud7af]/.test(text);
+}
+
+/**
+ * Automatically detects and decodes subtitle file buffer supporting UTF-8 (with/without BOM),
+ * UTF-16LE, UTF-16BE, and Chinese legacy encodings (GB18030 / GBK / GB2312).
+ */
+export function decodeSubtitleBuffer(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  if (bytes.length === 0) return '';
+
+  // 1. Check for standard BOM signatures
+  // UTF-8 BOM: EF BB BF
+  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    return new TextDecoder('utf-8').decode(bytes.subarray(3));
+  }
+  // UTF-16LE BOM: FF FE
+  if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+    return new TextDecoder('utf-16le').decode(bytes.subarray(2));
+  }
+  // UTF-16BE BOM: FE FF
+  if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+    return new TextDecoder('utf-16be').decode(bytes.subarray(2));
+  }
+
+  // 2. Check for UTF-16 without BOM (alternating zero bytes)
+  if (bytes.length >= 4) {
+    let zerosEven = 0;
+    let zerosOdd = 0;
+    const sampleLen = Math.min(bytes.length, 512);
+    for (let i = 0; i < sampleLen; i++) {
+      if (bytes[i] === 0) {
+        if (i % 2 === 0) zerosEven++;
+        else zerosOdd++;
+      }
+    }
+    if (zerosOdd > sampleLen / 4) {
+      try {
+        return new TextDecoder('utf-16le').decode(bytes);
+      } catch (_) {}
+    } else if (zerosEven > sampleLen / 4) {
+      try {
+        return new TextDecoder('utf-16be').decode(bytes);
+      } catch (_) {}
+    }
+  }
+
+  // 3. Try UTF-8 with fatal: true to strictly detect encoding validity
+  try {
+    const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+    return utf8Decoder.decode(bytes);
+  } catch (_) {
+    // 4. Fallback to Chinese GB18030 / GBK (covers millions of Chinese subtitle files)
+    try {
+      const gbkDecoder = new TextDecoder('gb18030');
+      return gbkDecoder.decode(bytes);
+    } catch (_) {
+      try {
+        const gbkDecoder = new TextDecoder('gbk');
+        return gbkDecoder.decode(bytes);
+      } catch (_) {
+        return new TextDecoder('utf-8').decode(bytes);
+      }
+    }
+  }
+}
+
+/**
+ * Clean ASS/SSA tags, including style overrides, vector drawings, and escape sequences.
+ * e.g. {\pos(100,200)}, {\c&H00FFFF&}, {\fad(200,200)}, {\p1}m 0 0 ...{\p0}, \N
  */
 export function cleanAssText(text: string): string {
   if (!text) return '';
-  return text
-    .replace(/\{[^\}]+\}/g, '') // strip {...} tags
-    .replace(/\\N/g, '\n')      // replace \N with newline
+  const cleaned = text
+    // 1. Remove ASS vector drawings {\p1}...{\p0} and any embedded drawing paths
+    .replace(/\{[^\}]*\\p[1-9][^\}]*\}[^]*?(?:\{[^\}]*\\p0[^\}]*\}|$)/gi, '')
+    .replace(/\{[^\}]*\\p0[^\}]*\}/gi, '')
+    // 2. Strip all {...} style override tags (e.g. {\pos}, {\an}, {\c&H...&}, {\fn...}, {\fs...})
+    .replace(/\{[^\}]+\}/g, '')
+    // 3. Replace ASS newlines with standard newlines
+    .replace(/\\N/g, '\n')
     .replace(/\\n/g, '\n')
+    // 4. Replace ASS hard space \h with regular space
     .replace(/\\h/g, ' ')
     .trim();
+
+  // Filter out standalone vector path commands (e.g. "m 0 0 l 10 10...")
+  if (/^[mnlbspc\d\s\.\-]+$/i.test(cleaned) && /\b[mlb]\s+[-]?\d+/i.test(cleaned)) {
+    return '';
+  }
+
+  return cleaned;
 }
 
 /**
@@ -109,23 +195,63 @@ export function splitBilingualLines(lines: string[]): { textEn: string; textZh: 
 }
 
 /**
- * Parse ASS/SSA format subtitle string
+ * Parse ASS/SSA format subtitle string with dynamic Format header resolution and dual-event alignment
  */
-function parseAssSubtitles(rawText: string): SubtitleCue[] {
+export function parseAssSubtitles(rawText: string): SubtitleCue[] {
   const cues: SubtitleCue[] = [];
   const lines = rawText.split(/\r?\n/);
   let idCounter = 1;
 
+  let inEventsSection = false;
+  // Default indices if Format header is missing
+  let startIdx = 1;
+  let endIdx = 2;
+  let textIdx = 9;
+
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.startsWith('Dialogue:')) {
-      // Format: Dialogue: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-      const content = trimmed.substring(9).trim();
-      const parts = content.split(',');
-      if (parts.length >= 9) {
-        const start = timeStringToSeconds(parts[1]);
-        const end = timeStringToSeconds(parts[2]);
-        const rawDialogue = parts.slice(9).join(',');
+    if (!trimmed) continue;
+
+    // Detect section transitions
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      inEventsSection = /^\[events\]$/i.test(trimmed);
+      continue;
+    }
+
+    // Dynamic Format: line parsing under [Events]
+    if (inEventsSection && /^format\s*:/i.test(trimmed)) {
+      const formatHeader = trimmed.replace(/^format\s*:\s*/i, '');
+      const cols = formatHeader.split(',').map(c => c.trim().toLowerCase());
+      const s = cols.indexOf('start');
+      const e = cols.indexOf('end');
+      const t = cols.indexOf('text');
+      if (s !== -1) startIdx = s;
+      if (e !== -1) endIdx = e;
+      if (t !== -1) textIdx = t;
+      continue;
+    }
+
+    // Parse Dialogue lines (both standard Dialogue: and Comment: if marked)
+    if (/^dialogue\s*:/i.test(trimmed)) {
+      const content = trimmed.replace(/^dialogue\s*:\s*/i, '');
+      const parts: string[] = [];
+      let cur = '';
+      let commaCount = 0;
+      for (let i = 0; i < content.length; i++) {
+        if (commaCount < textIdx && content[i] === ',') {
+          parts.push(cur.trim());
+          cur = '';
+          commaCount++;
+        } else {
+          cur += content[i];
+        }
+      }
+      parts.push(cur);
+
+      if (parts.length > Math.max(startIdx, endIdx)) {
+        const start = timeStringToSeconds(parts[startIdx]);
+        const end = timeStringToSeconds(parts[endIdx]);
+        const rawDialogue = parts[textIdx] !== undefined ? parts.slice(textIdx).join(',') : parts[parts.length - 1];
         const text = cleanAssText(rawDialogue);
 
         if (text && end > start) {
@@ -152,7 +278,256 @@ function parseAssSubtitles(rawText: string): SubtitleCue[] {
     }
   }
 
-  return cues.sort((a, b) => a.start - b.start);
+  if (cues.length === 0) return [];
+
+  // Sort chronologically
+  cues.sort((a, b) => a.start - b.start || a.end - b.end);
+
+  // Dual-Event Alignment: Many ASS fansubs use two separate Dialogue lines
+  // (one English style, one Chinese style) with identical or overlapping timestamps.
+  const mergedCues: SubtitleCue[] = [];
+  for (let i = 0; i < cues.length; i++) {
+    const cur = cues[i];
+    if (mergedCues.length > 0) {
+      const prev = mergedCues[mergedCues.length - 1];
+      const timeDiff = Math.abs(prev.start - cur.start);
+      const isOverlapping = timeDiff <= 0.8 && (Math.min(prev.end, cur.end) - Math.max(prev.start, cur.start) >= 0);
+
+      // Check if one has English only and the other has Chinese only
+      const prevEnOnly = prev.textEn && !prev.textZh;
+      const prevZhOnly = !prev.textEn && prev.textZh;
+      const curEnOnly = cur.textEn && !cur.textZh;
+      const curZhOnly = !cur.textEn && cur.textZh;
+
+      if (isOverlapping && ((prevEnOnly && curZhOnly) || (prevZhOnly && curEnOnly))) {
+        if (curZhOnly) {
+          prev.textZh = cur.textZh;
+        } else {
+          prev.textEn = cur.textEn;
+        }
+        prev.start = Math.min(prev.start, cur.start);
+        prev.end = Math.max(prev.end, cur.end);
+        continue;
+      }
+    }
+    mergedCues.push({ ...cur });
+  }
+
+  return sanitizeCues(mergedCues);
+}
+
+/**
+ * Parse LRC format lyrics/dialogue subtitle string (e.g. [01:23.45]Hello world)
+ */
+export function parseLrcSubtitles(rawText: string): SubtitleCue[] {
+  if (!rawText) return [];
+  const lines = rawText.split(/\r?\n/);
+  const items: Array<{ time: number; text: string }> = [];
+
+  const timeRegex = /\[(\d{1,2}):(\d{2})(?:[.:](\d{2,3}))?\]/g;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    timeRegex.lastIndex = 0;
+    const timestamps: number[] = [];
+    let match: RegExpExecArray | null;
+    let lastIndex = 0;
+
+    while ((match = timeRegex.exec(trimmed)) !== null) {
+      const mins = parseInt(match[1], 10) || 0;
+      const secs = parseInt(match[2], 10) || 0;
+      const msPart = match[3] || '0';
+      const ms = msPart.length === 2 ? parseInt(msPart, 10) * 10 : parseInt(msPart, 10);
+      timestamps.push(mins * 60 + secs + ms / 1000);
+      lastIndex = timeRegex.lastIndex;
+    }
+
+    if (timestamps.length > 0) {
+      const lyricText = trimmed.slice(lastIndex).trim();
+      if (lyricText && isValidSubtitleText(lyricText)) {
+        for (const t of timestamps) {
+          items.push({ time: t, text: lyricText });
+        }
+      }
+    }
+  }
+
+  if (items.length === 0) return [];
+  items.sort((a, b) => a.time - b.time);
+
+  const cues: SubtitleCue[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const nextItem = items[i + 1];
+    const start = item.time;
+    const end = nextItem ? Math.min(start + 8.0, Math.max(start + 0.8, nextItem.time)) : start + 3.5;
+
+    const splitLines = item.text.split(/\\n|\/|\n/).map(l => l.trim()).filter(Boolean);
+    const { textEn, textZh } = splitBilingualLines(splitLines);
+
+    cues.push({
+      id: i + 1,
+      start,
+      end,
+      textEn: textEn || (!isCjkText(item.text) ? item.text : ''),
+      textZh: textZh || (isCjkText(item.text) ? item.text : '')
+    });
+  }
+
+  return sanitizeCues(cues);
+}
+
+/**
+ * Parse MicroDVD SUB format (e.g. {100}{200}Hello or {00:01:23}{00:01:26}Hello)
+ */
+export function parseMicroDvdSubtitles(rawText: string, fps = 25): SubtitleCue[] {
+  if (!rawText) return [];
+  const lines = rawText.split(/\r?\n/);
+  const cues: SubtitleCue[] = [];
+  let idCounter = 1;
+
+  // Regex matching {start}{end}text
+  const subRegex = /^\{([\d:.]+)\}\{([\d:.]+)\}(.*)$/;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    const match = subRegex.exec(trimmed);
+    if (!match) continue;
+
+    const rawStart = match[1];
+    const rawEnd = match[2];
+    const rawContent = match[3].trim();
+
+    let start = 0;
+    let end = 0;
+
+    if (rawStart.includes(':')) {
+      start = timeStringToSeconds(rawStart);
+      end = timeStringToSeconds(rawEnd);
+    } else {
+      start = (parseInt(rawStart, 10) || 0) / fps;
+      end = (parseInt(rawEnd, 10) || 0) / fps;
+    }
+
+    if (end <= start) end = start + 3.0;
+
+    // MicroDVD uses | for newlines
+    const splitLines = rawContent.split('|').map(l => l.trim()).filter(Boolean);
+    const { textEn, textZh } = splitBilingualLines(splitLines);
+
+    if (textEn || textZh || isValidSubtitleText(rawContent)) {
+      cues.push({
+        id: idCounter++,
+        start,
+        end,
+        textEn: textEn || (!isCjkText(rawContent) ? rawContent : ''),
+        textZh: textZh || (isCjkText(rawContent) ? rawContent : '')
+      });
+    }
+  }
+
+  return sanitizeCues(cues);
+}
+
+/**
+ * Parse TTML / DFXP / XML timed text subtitles
+ */
+export function parseTtmlSubtitles(xmlText: string): SubtitleCue[] {
+  if (!xmlText || typeof xmlText !== 'string') return [];
+  const cues: SubtitleCue[] = [];
+  let id = 1;
+
+  const parseTtmlTime = (val: string): number => {
+    if (!val) return 0;
+    const clean = val.trim();
+    if (clean.endsWith('s')) {
+      return parseFloat(clean) || 0;
+    }
+    if (clean.endsWith('ms')) {
+      return (parseFloat(clean) || 0) / 1000;
+    }
+    if (clean.includes(':')) {
+      return timeStringToSeconds(clean);
+    }
+    return parseFloat(clean) || 0;
+  };
+
+  // Match <p ... begin="..." end="...">content</p> or <span ...>
+  const pRegex = /<p\b[^>]*begin="([^"]+)"(?:[^>]*end="([^"]+)")?(?:[^>]*dur="([^"]+)")?[^>]*>([\s\S]*?)<\/p>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = pRegex.exec(xmlText)) !== null) {
+    const beginStr = match[1];
+    const endStr = match[2];
+    const durStr = match[3];
+    const rawContent = match[4] || '';
+
+    const start = parseTtmlTime(beginStr);
+    let end = endStr ? parseTtmlTime(endStr) : durStr ? start + parseTtmlTime(durStr) : start + 3.0;
+    if (end <= start) end = start + 3.0;
+
+    const cleaned = decodeHtmlEntities(rawContent.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim());
+    if (cleaned && isValidSubtitleText(cleaned)) {
+      const splitLines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
+      const { textEn, textZh } = splitBilingualLines(splitLines);
+      cues.push({
+        id: id++,
+        start,
+        end,
+        textEn: textEn || (!isCjkText(cleaned) ? cleaned : ''),
+        textZh: textZh || (isCjkText(cleaned) ? cleaned : '')
+      });
+    }
+  }
+
+  return sanitizeCues(cues);
+}
+
+/**
+ * Parse Bilibili BCC / JSON subtitle format ({ body: [ { from, to, content } ] })
+ */
+export function parseBccJsonSubtitles(jsonContent: string | object): SubtitleCue[] {
+  let data: any;
+  if (typeof jsonContent === 'string') {
+    try {
+      data = JSON.parse(jsonContent);
+    } catch {
+      return [];
+    }
+  } else {
+    data = jsonContent;
+  }
+
+  if (!data || !Array.isArray(data.body) || data.body.length === 0) {
+    return [];
+  }
+
+  const cues: SubtitleCue[] = [];
+  let id = 1;
+
+  for (const item of data.body) {
+    const start = typeof item.from === 'number' ? item.from : parseFloat(item.from) || 0;
+    const end = typeof item.to === 'number' ? item.to : parseFloat(item.to) || start + 3.0;
+    const rawContent = (item.content || '').trim();
+    if (!rawContent || !isValidSubtitleText(rawContent)) continue;
+
+    const splitLines = rawContent.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+    const { textEn, textZh } = splitBilingualLines(splitLines);
+
+    cues.push({
+      id: id++,
+      start,
+      end,
+      textEn: textEn || (!isCjkText(rawContent) ? rawContent : ''),
+      textZh: textZh || (isCjkText(rawContent) ? rawContent : '')
+    });
+  }
+
+  return sanitizeCues(cues);
 }
 
 /**
@@ -364,6 +739,11 @@ export function sanitizeCues(cues: SubtitleCue[]): SubtitleCue[] {
         textEn = textZh;
         textZh = '';
       }
+      // If textEn contains CJK and textZh is empty, demote textEn to textZh
+      if (textEn && !textZh && isCjkText(textEn)) {
+        textZh = textEn;
+        textEn = '';
+      }
       return {
         ...c,
         textEn,
@@ -465,6 +845,27 @@ export function sanitizeCues(cues: SubtitleCue[]): SubtitleCue[] {
       }
     }
 
+    // 4.1 Dual-track bilingual alignment check (one has English, one has Chinese with overlapping timestamps)
+    const prevHasEnOnly = Boolean(prev.textEn && !prev.textZh);
+    const prevHasZhOnly = Boolean(!prev.textEn && prev.textZh);
+    const curHasEnOnly = Boolean(textEn && !textZh);
+    const curHasZhOnly = Boolean(!textEn && textZh);
+
+    if ((prevHasEnOnly && curHasZhOnly) || (prevHasZhOnly && curHasEnOnly)) {
+      const overlap = Math.min(prev.end, end) - Math.max(prev.start, start);
+      const minDur = Math.min(prev.end - prev.start, end - start);
+      if (overlap > 0.3 || (minDur > 0 && overlap / minDur > 0.4) || Math.abs(prev.start - start) < 1.2) {
+        if (curHasZhOnly) {
+          prev.textZh = textZh;
+        } else {
+          prev.textEn = textEn;
+        }
+        prev.start = Math.min(prev.start, start);
+        prev.end = Math.max(prev.end, end);
+        continue;
+      }
+    }
+
     // 5. Consecutive new cue in timeline: ensure strict non-overlapping timeline
     if (prev.end > start) {
       prev.end = Math.max(prev.start + 0.2, start);
@@ -492,121 +893,33 @@ export function sanitizeCues(cues: SubtitleCue[]): SubtitleCue[] {
 
 /**
  * Intelligently splits a single subtitle cue into concise, semantically complete sub-cues
- * (typically 3~7 words, max 8~9 words) matching Language Reactor's single-line display.
+ * (soft limit 8~12 words, hard limit 14 words or 70 characters) matching Language Reactor's
+ * concise single-line display and YouTube native subtitle standards.
  * Proportionally interpolates start and end timestamps.
  */
-export function splitLongCueSemantically(cue: SubtitleCue, maxWords = 8): SubtitleCue[] {
+export function splitLongCueSemantically(cue: SubtitleCue, maxWords = 12, maxChars = 70): SubtitleCue[] {
   if (!cue) return [];
-  const textEn = cleanPunctuationSpacing(cleanLiveCaptionGarbage(cue.textEn || '')).trim();
-  const textZh = cleanPunctuationSpacing(cleanLiveCaptionGarbage(cue.textZh || '')).trim();
+  let textEn = cleanPunctuationSpacing(cleanLiveCaptionGarbage(cue.textEn || '')).trim();
+  let textZh = cleanPunctuationSpacing(cleanLiveCaptionGarbage(cue.textZh || '')).trim();
   if (!textEn && !textZh) return [];
+
+  // Demote Chinese from textEn to textZh if textZh is empty
+  if (textEn && !textZh && isChineseText(textEn)) {
+    textZh = textEn;
+    textEn = '';
+  }
 
   const countWords = (t: string) => (t.trim().match(/\S+/g) || []).length;
   const isAbbreviation = (w: string) =>
     /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e)\.$/i.test(w.trim());
   const hasTerminal = (w: string) => /[.?!。？！]$/.test(w.trim()) && !isAbbreviation(w);
-  const hasClausePunct = (w: string) => /[,;:—\-"']$/.test(w.trim());
+  const hasClausePunct = (w: string) => /[,;:—\-"'，；：]$/.test(w.trim());
   const isConnector = (w: string) =>
-    /^(and|but|or|so|because|which|that|when|where|if|while|like|with|for|to|in|on|about|as|then|after|before|since|until)$/i.test(
+    /^(and|but|or|so|because|which|that|when|where|if|while|like|with|for|to|in|on|about|as|then|after|before|since|until|although|though)$/i.test(
       w.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '')
     );
 
-  const words = textEn.split(/\s+/).filter(Boolean);
-
-  // If text is primarily CJK or English is empty:
-  if (words.length === 0) {
-    if (textZh.length <= 18) return [{ ...cue, textEn, textZh }];
-    // Split long Chinese sentence at punctuation or midpoint
-    const zhPieces = textZh.split(/([，。！？；：])/).reduce((acc: string[], cur, idx) => {
-      if (idx % 2 === 0) acc.push(cur);
-      else if (acc.length > 0) acc[acc.length - 1] += cur;
-      return acc;
-    }, []).filter(p => p.trim().length > 0);
-
-    if (zhPieces.length <= 1) return [{ ...cue, textEn, textZh }];
-    const dur = Math.max(0.2, cue.end - cue.start);
-    let el = 0;
-    return zhPieces.map((p, i) => {
-      const pStart = cue.start + (el / textZh.length) * dur;
-      el += p.length;
-      const pEnd = i === zhPieces.length - 1 ? cue.end : cue.start + (el / textZh.length) * dur;
-      return {
-        ...cue,
-        id: cue.id,
-        start: Math.round(pStart * 100) / 100,
-        end: Math.round(pEnd * 100) / 100,
-        textEn: '',
-        textZh: p.trim()
-      };
-    });
-  }
-
-  const hasInternalTerminal = words.some((w, idx) => idx < words.length - 1 && hasTerminal(w));
-  if (words.length <= maxWords && !hasInternalTerminal) {
-    return [{ ...cue, textEn, textZh }];
-  }
-
-  const pieces: string[] = [];
-  let cur: string[] = [];
-
-  for (let i = 0; i < words.length; i++) {
-    const w = words[i];
-    cur.push(w);
-    const count = cur.length;
-    const remaining = words.length - (i + 1);
-
-    if (hasTerminal(w)) {
-      pieces.push(cur.join(' '));
-      cur = [];
-      continue;
-    }
-
-    if (hasClausePunct(w) && count >= 3 && remaining >= 2) {
-      pieces.push(cur.join(' '));
-      cur = [];
-      continue;
-    }
-
-    if (count >= 4 && count <= maxWords && remaining >= 3) {
-      const nextWord = words[i + 1];
-      if (nextWord && isConnector(nextWord)) {
-        pieces.push(cur.join(' '));
-        cur = [];
-        continue;
-      }
-    }
-
-    if (count >= maxWords) {
-      pieces.push(cur.join(' '));
-      cur = [];
-    }
-  }
-
-  if (cur.length > 0) {
-    const prevPiece = pieces[pieces.length - 1];
-    const prevEndsWithTerminal = prevPiece && hasTerminal(prevPiece);
-    if (
-      pieces.length > 0 &&
-      !prevEndsWithTerminal &&
-      cur.length <= 2 &&
-      countWords(prevPiece) + cur.length <= maxWords + 1
-    ) {
-      pieces[pieces.length - 1] = pieces[pieces.length - 1] + ' ' + cur.join(' ');
-    } else {
-      pieces.push(cur.join(' '));
-    }
-  }
-
-  if (pieces.length <= 1) {
-    return [{ ...cue, textEn, textZh }];
-  }
-
-  const totalWords = words.length;
-  const duration = Math.max(0.2, cue.end - cue.start);
-  let elapsed = 0;
-  const result: SubtitleCue[] = [];
-
-  // Helper to split or distribute Chinese translation across split English pieces
+  // Helper to split or distribute Chinese/translation across split English pieces
   const splitZhPieces = (zh: string, pieceCount: number): string[] => {
     if (!zh || pieceCount <= 1) return Array(pieceCount).fill(zh || '');
     const parts = zh.split(/(?<=[。！？；，、])/).filter(p => p.trim().length > 0);
@@ -620,23 +933,222 @@ export function splitLongCueSemantically(cue: SubtitleCue, maxWords = 8): Subtit
       }
       return res;
     }
-    return Array(pieceCount).fill(zh);
+    // Proportional character slicing fallback so overlong Chinese is never duplicated in full
+    const perChar = Math.ceil(zh.length / pieceCount);
+    const res: string[] = [];
+    for (let i = 0; i < pieceCount; i++) {
+      res.push(zh.slice(i * perChar, (i + 1) * perChar));
+    }
+    return res;
   };
 
-  const zhPieces = splitZhPieces(textZh, pieces.length);
+  const effectiveEnd = Math.max(cue.start + 0.2, cue.end);
+  const duration = effectiveEnd - cue.start;
 
-  for (let idx = 0; idx < pieces.length; idx++) {
-    const p = pieces[idx];
-    const pCount = countWords(p);
+  // Tokenize textEn with support for unspaced languages like Thai/Khmer via Intl.Segmenter
+  let words = textEn.split(/\s+/).filter(Boolean);
+  if (words.length <= 1 && textEn.length > 25 && typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    try {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: 'word' });
+      const segmented = Array.from(segmenter.segment(textEn))
+        .filter(s => s.isWordLike || /[\p{L}\p{N}]/u.test(s.segment))
+        .map(s => s.segment.trim())
+        .filter(Boolean);
+      if (segmented.length > 1) {
+        words = segmented;
+      }
+    } catch (_) {}
+  }
+
+  const isZhOverlength = isCjkText(textZh) ? textZh.length > 30 : textZh.length > maxChars;
+
+  // If text is primarily CJK or English is empty:
+  if (words.length === 0) {
+    if (!isZhOverlength && textZh.length <= maxChars) {
+      return [{ ...cue, end: effectiveEnd, textEn, textZh }];
+    }
+    // Split long Chinese sentence at punctuation or natural break
+    const zhPieces = textZh.split(/([，。！？；：、])/).reduce((acc: string[], cur, idx) => {
+      if (idx % 2 === 0) acc.push(cur);
+      else if (acc.length > 0) acc[acc.length - 1] += cur;
+      return acc;
+    }, []).filter(p => p.trim().length > 0);
+
+    const refinedZh: string[] = [];
+    let curZh = '';
+    const maxZhLimit = isCjkText(textZh) ? 30 : maxChars;
+    for (const p of zhPieces) {
+      if (!curZh) {
+        curZh = p;
+      } else if (curZh.length + p.length <= maxZhLimit) {
+        curZh += p;
+      } else {
+        refinedZh.push(curZh);
+        curZh = p;
+      }
+    }
+    if (curZh) {
+      refinedZh.push(curZh);
+    }
+
+    const finalZh: string[] = [];
+    for (const p of refinedZh) {
+      if (p.length <= maxZhLimit) {
+        finalZh.push(p);
+      } else {
+        const sliceStep = isCjkText(p) ? 25 : maxChars;
+        for (let i = 0; i < p.length; i += sliceStep) {
+          finalZh.push(p.slice(i, i + sliceStep));
+        }
+      }
+    }
+
+    if (finalZh.length <= 1) return [{ ...cue, end: effectiveEnd, textEn, textZh }];
+    let el = 0;
+    return finalZh.map((p, i) => {
+      const pStart = cue.start + (el / textZh.length) * duration;
+      el += p.length;
+      const pEnd = i === finalZh.length - 1 ? effectiveEnd : cue.start + (el / textZh.length) * duration;
+      const safeEnd = Math.max(pStart + 0.2, pEnd);
+      return {
+        ...cue,
+        id: cue.id,
+        start: Math.round(pStart * 1000) / 1000,
+        end: Math.round(safeEnd * 1000) / 1000,
+        textEn: '',
+        textZh: p.trim()
+      };
+    });
+  }
+
+  // If textEn is short (<= 1 word) but textZh is overlong, split based on textZh
+  if (words.length <= 1 && isZhOverlength) {
+    const zhSplit = splitLongCueSemantically({ ...cue, end: effectiveEnd, textEn: '', textZh }, maxWords, maxChars);
+    if (zhSplit.length > 1) {
+      zhSplit[0].textEn = textEn;
+      return zhSplit;
+    }
+  }
+
+  const hasInternalTerminal = words.some((w, idx) => idx < words.length - 1 && hasTerminal(w));
+  const isEnOverlength = words.length > 14 || textEn.length > maxChars;
+  if (words.length <= maxWords && !hasInternalTerminal && !isEnOverlength && !isZhOverlength) {
+    return [{ ...cue, end: effectiveEnd, textEn, textZh }];
+  }
+
+  const pieces: string[] = [];
+  let cur: string[] = [];
+
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    const remaining = words.length - (i + 1);
+
+    // Lookahead: if adding this word would violate hard limits (14 words or maxChars),
+    // flush the current accumulated piece first so it stays within bounds.
+    if (cur.length > 0 && (cur.length >= 14 || cur.join(' ').length + 1 + w.length > maxChars)) {
+      pieces.push(cur.join(' '));
+      cur = [];
+    }
+
+    cur.push(w);
+    const count = cur.length;
+    const curLen = cur.join(' ').length;
+
+    if (hasTerminal(w)) {
+      pieces.push(cur.join(' '));
+      cur = [];
+      continue;
+    }
+
+    // Natural clause break: comma / semicolon with reasonable length
+    if (hasClausePunct(w) && count >= 4 && remaining >= 3) {
+      pieces.push(cur.join(' '));
+      cur = [];
+      continue;
+    }
+
+    // Natural connector break (e.g. before "and", "but", "so", "because", etc.)
+    if (count >= 5 && count <= maxWords && remaining >= 3) {
+      const nextWord = words[i + 1];
+      if (nextWord && isConnector(nextWord)) {
+        pieces.push(cur.join(' '));
+        cur = [];
+        continue;
+      }
+    }
+
+    // Soft/hard limit reached: soft limit maxWords (12), hard limit 14 words or maxChars (70 chars)
+    if (count >= maxWords && remaining >= 3) {
+      pieces.push(cur.join(' '));
+      cur = [];
+    } else if (count >= 14 || curLen >= maxChars) {
+      pieces.push(cur.join(' '));
+      cur = [];
+    }
+  }
+
+  if (cur.length > 0) {
+    const prevPiece = pieces[pieces.length - 1];
+    const prevEndsWithTerminal = prevPiece && hasTerminal(prevPiece);
+    const prevCount = prevPiece ? countWords(prevPiece) : 0;
+    const prevLen = prevPiece ? prevPiece.length : 0;
+    const curLen = cur.join(' ').length;
+    if (
+      pieces.length > 0 &&
+      !prevEndsWithTerminal &&
+      cur.length <= 2 &&
+      prevCount + cur.length <= 14 &&
+      prevLen + curLen + 1 <= maxChars
+    ) {
+      pieces[pieces.length - 1] = pieces[pieces.length - 1] + ' ' + cur.join(' ');
+    } else {
+      pieces.push(cur.join(' '));
+    }
+  }
+
+  // Safe slicing pass: ensure absolutely NO piece in pieces exceeds maxChars
+  const safePieces: string[] = [];
+  for (const p of pieces) {
+    if (p.length <= maxChars) {
+      safePieces.push(p);
+    } else {
+      for (let i = 0; i < p.length; i += maxChars) {
+        safePieces.push(p.slice(i, i + maxChars));
+      }
+    }
+  }
+
+  if (safePieces.length <= 1) {
+    if (isZhOverlength && words.length >= 2) {
+      // If safePieces is only 1 piece but textZh exceeds limit, force a mid-point split
+      const mid = Math.floor(words.length / 2);
+      safePieces.length = 0;
+      safePieces.push(words.slice(0, mid).join(' '));
+      safePieces.push(words.slice(mid).join(' '));
+    } else {
+      return [{ ...cue, end: effectiveEnd, textEn, textZh }];
+    }
+  }
+
+  const totalWords = words.length > 0 ? words.length : safePieces.length;
+  let elapsed = 0;
+  const result: SubtitleCue[] = [];
+
+  const zhPieces = splitZhPieces(textZh, safePieces.length);
+
+  for (let idx = 0; idx < safePieces.length; idx++) {
+    const p = safePieces[idx];
+    const pCount = words.length > 0 ? countWords(p) : 1;
     const start = cue.start + (elapsed / totalWords) * duration;
     elapsed += pCount;
-    const end = idx === pieces.length - 1 ? cue.end : cue.start + (elapsed / totalWords) * duration;
+    const end = idx === safePieces.length - 1 ? effectiveEnd : cue.start + (elapsed / totalWords) * duration;
+    const safeEnd = Math.max(start + 0.2, end);
 
     result.push({
       ...cue,
       id: cue.id,
-      start: Math.round(start * 100) / 100,
-      end: Math.round(end * 100) / 100,
+      start: Math.round(start * 1000) / 1000,
+      end: Math.round(safeEnd * 1000) / 1000,
       textEn: p.trim(),
       textZh: zhPieces[idx] || textZh
     });
@@ -766,21 +1278,38 @@ export function assembleConciseAsrCues(cues: SubtitleCue[], maxWords = 8): Subti
 }
 
 /**
- * Fast Local Rule-Based Semantic Sentence Segmentation (Local Fallback)
+ * Fast Local Rule-Based Semantic Sentence Segmentation (Local Fallback & ASR Assembly)
  *
- * Preserves complete, meaningful grammatical sentences (e.g. main and subordinate clauses)
- * like "While energy is fresh, it tells me to film everything first and then move on to phase two..."
- * as a single unified cue rather than slicing into rigid 8-word mechanical chunks.
- * Breaks on authentic terminal punctuation (. ? !), significant speech silence gaps (>= 0.65s),
- * or natural boundary thresholds.
+ * Implements Language Reactor & YouTube Native subtitle standards:
+ * - Concise, single-line/two-line reading units (soft limit 8~12 words, hard limit 14 words or 70 chars)
+ * - Breaks on authentic terminal punctuation (. ? !), speech silence gaps (>= 0.35s),
+ *   clause boundaries (comma/semicolon), or coordinating connectors (and, but, so, because, etc.)
+ * - Strict upper bound prevents screen-dominating oversized 30~40+ word blocks.
  */
 export function segmentCuesLocally(cues: SubtitleCue[]): SubtitleCue[] {
   if (!cues || cues.length === 0) return [];
-  if (cues.length === 1) return cues;
+
+  // Step 0: Pre-split any incoming oversized cues (word count > 14 or length > 70 chars)
+  const normalized: SubtitleCue[] = [];
+  for (const c of cues) {
+    const split = splitLongCueSemantically(c, 12, 70);
+    normalized.push(...split);
+  }
+
+  if (normalized.length <= 1) return normalized;
 
   const isAbbreviation = (w: string) =>
     /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e)\.$/i.test(w.trim());
   const hasTerminal = (t: string) => /[.?!。？！]$/.test(t.trim()) && !isAbbreviation(t);
+  const hasClausePunct = (t: string) => /[,;:—\-"'，；：]$/.test(t.trim());
+  const isConnectorWord = (w: string) =>
+    /^(and|but|or|so|because|which|that|when|where|if|while|like|with|for|to|in|on|about|as|then|after|before|since|until|although|though)$/i.test(
+      w.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '')
+    );
+  const countWords = (t: string) => {
+    if (!t) return 0;
+    return (t.trim().match(/\S+/g) || []).length;
+  };
   const countTokens = (t: string) => {
     if (!t) return 0;
     const cjkChars = (t.match(/[\u4e00-\u9fa5\u3040-\u30ff\u3400-\u4dbf]/g) || []).length;
@@ -792,8 +1321,8 @@ export function segmentCuesLocally(cues: SubtitleCue[]): SubtitleCue[] {
   const merged: SubtitleCue[] = [];
   let accumCue: SubtitleCue | null = null;
 
-  for (let i = 0; i < cues.length; i++) {
-    const cue = cues[i];
+  for (let i = 0; i < normalized.length; i++) {
+    const cue = normalized[i];
     const textEn = (cue.textEn || '').trim();
     const textZh = (cue.textZh || '').trim();
     if (!textEn && !textZh) continue;
@@ -815,21 +1344,38 @@ export function segmentCuesLocally(cues: SubtitleCue[]): SubtitleCue[] {
 
     const cur: SubtitleCue = accumCue;
     const gap = cue.start - cur.end;
-    const accumWords = countTokens(cur.textEn || cur.textZh);
-    const nextWords = countTokens(textEn || textZh);
+    const accumWords = countWords(cur.textEn);
+    const nextWords = countWords(textEn);
     const totalWords = accumWords + nextWords;
+    const combinedEnLength = (cur.textEn ? `${cur.textEn} ${textEn}` : textEn).length;
+    const combinedZhLength = (cur.textZh ? `${cur.textZh}${textZh}` : textZh).length;
+
     const accumHasTerminal = hasTerminal(cur.textEn) || hasTerminal(cur.textZh);
+    const accumHasClause = hasClausePunct(cur.textEn) || hasClausePunct(cur.textZh);
 
-    // Natural grammatical sentence preservation rules:
-    // 1. Break immediately if previous accumulation already ended with terminal punctuation (., ?, !)
-    // 2. Break if there is a significant speech silence gap (gap >= 0.7s)
-    // 3. Keep subordinate/coordinate sentences together up to 30 words / 10s duration
-    // 4. Do NOT mechanically chop at 8 words!
-    const isSilencePause = gap >= 0.7;
-    const isDurationOverlength = (cue.end - cur.start) > 10.5 && totalWords > 24;
-    const isWordCountOverlength = totalWords > 32;
+    const firstNextWord = (textEn || '').trim().split(/\s+/)[0] || '';
+    const isNextConnector = isConnectorWord(firstNextWord);
 
-    const shouldBreak = accumHasTerminal || isSilencePause || isDurationOverlength || isWordCountOverlength;
+    // Natural grammatical sentence preservation & concise bounds:
+    // 1. Break immediately if previous accumulation ended with terminal punctuation (., ?, !)
+    // 2. Break if there is a speech silence gap (gap >= 0.35s)
+    // 3. Break if previous accumulation ended with clause punctuation and already has >= 5 words
+    // 4. Break if next cue starts with connector/conjunction and accum is already at soft limit (>= 7 words or total > 12 words)
+    // 5. Break if duration exceeds 4.5s and words >= 8
+    // 6. Hard limit: total words > 14 OR total English chars > 70 OR Chinese chars > 30
+    const isSilencePause = gap >= 0.35;
+    const isClauseBreak = accumHasClause && (accumWords >= 5 || totalWords > 10);
+    const isConnectorBreak = isNextConnector && (accumWords >= 7 || totalWords > 12);
+    const isDurationOverlength = (cue.end - cur.start) > 4.5 && totalWords >= 8;
+    const isHardLimitReached = totalWords > 14 || combinedEnLength > 70 || combinedZhLength > 30;
+
+    const shouldBreak =
+      accumHasTerminal ||
+      isSilencePause ||
+      isClauseBreak ||
+      isConnectorBreak ||
+      isDurationOverlength ||
+      isHardLimitReached;
 
     if (shouldBreak) {
       merged.push(cur);
@@ -845,7 +1391,7 @@ export function segmentCuesLocally(cues: SubtitleCue[]): SubtitleCue[] {
         accumCue = null;
       }
     } else {
-      // Merge into complete grammatical sentence
+      // Merge within concise boundary
       const combinedEn: string = cur.textEn
         ? `${cur.textEn} ${textEn}`
         : textEn;
@@ -882,7 +1428,22 @@ export function segmentCuesLocally(cues: SubtitleCue[]): SubtitleCue[] {
     merged.push(accumCue);
   }
 
-  return merged.map((c, idx) => ({
+  // Final validation pass: ensure absolutely NO cue exceeds 14 words or 70 characters (or 30 CJK chars)
+  const finalized: SubtitleCue[] = [];
+  for (const c of merged) {
+    const enWords = countWords(c.textEn);
+    const enLen = (c.textEn || '').length;
+    const zhLen = (c.textZh || '').length;
+    const isZhCjk = isCjkText(c.textZh);
+    const maxZhLimit = isZhCjk ? 30 : 70;
+    if (enWords > 14 || enLen > 70 || zhLen > maxZhLimit) {
+      finalized.push(...splitLongCueSemantically(c, 12, 70));
+    } else {
+      finalized.push(c);
+    }
+  }
+
+  return finalized.map((c, idx) => ({
     ...c,
     id: idx + 1,
     start: Math.round(c.start * 1000) / 1000,
@@ -891,8 +1452,8 @@ export function segmentCuesLocally(cues: SubtitleCue[]): SubtitleCue[] {
 }
 
 /**
- * Assembles ASR speech into complete, meaningful grammatical sentences.
- * Replaces rigid 8-word mechanical chopping with semantic sentence boundary preservation.
+ * Assembles ASR speech into concise, meaningful grammatical sentences matching Language Reactor.
+ * Replaces screen-dominating oversized blocks with concise 8~12 word units (hard limit 14 words).
  */
 export function assembleLongAsrSentences(cues: SubtitleCue[]): SubtitleCue[] {
   return segmentCuesLocally(cues);
@@ -910,25 +1471,242 @@ export function cleanLiveCaptionGarbage(text: string): string {
 }
 
 /**
- * Backward-compatible alias directing to assembleConciseAsrCues (max 8~9 words).
+ * Backward-compatible alias directing to assembleLongAsrSentences (soft limit 8~12 words, max 14 words).
  */
 export function mergeYouTubeAsrCues(cues: SubtitleCue[]): SubtitleCue[] {
-  return assembleConciseAsrCues(cues, 8);
+  return assembleLongAsrSentences(cues);
+}
+
+/**
+ * Accurately slices a YouTube JSON3 ASR event into concise Language Reactor subtitle units
+ * (8~12 words, max 14 words / 70 chars) anchored directly to YouTube's native micro-timestamps (tOffsetMs).
+ */
+export function sliceYouTubeAsrEvent(event: YouTubeJson3Event): SubtitleCue[] {
+  if (!event || !event.segs || !Array.isArray(event.segs) || event.segs.length === 0) {
+    return [];
+  }
+
+  const tStartMs = event.tStartMs || 0;
+  const dDurationMs = event.dDurationMs || 0;
+  const eventEndMs = dDurationMs > 0 ? tStartMs + dDurationMs : tStartMs + 3000;
+
+  // Step 1: Pre-calculate segment base timestamps with proportional interpolation for missing tOffsetMs
+  const segTimes: number[] = new Array(event.segs.length);
+  let sIdx = 0;
+  while (sIdx < event.segs.length) {
+    if (typeof event.segs[sIdx].tOffsetMs === 'number') {
+      segTimes[sIdx] = tStartMs + (event.segs[sIdx].tOffsetMs || 0);
+      sIdx++;
+    } else {
+      let runEnd = sIdx;
+      while (runEnd < event.segs.length && typeof event.segs[runEnd].tOffsetMs !== 'number') {
+        runEnd++;
+      }
+      const prevAnchorTime = sIdx > 0 ? segTimes[sIdx - 1] : tStartMs;
+      let nextAnchorTime = eventEndMs;
+      if (runEnd < event.segs.length && typeof event.segs[runEnd].tOffsetMs === 'number') {
+        nextAnchorTime = tStartMs + (event.segs[runEnd].tOffsetMs || 0);
+      }
+      const safeNextAnchorTime = Math.max(prevAnchorTime, nextAnchorTime);
+      let totalRunLen = 0;
+      for (let k = sIdx; k < runEnd; k++) {
+        totalRunLen += Math.max(1, (event.segs[k].utf8 || '').trim().length);
+      }
+      let accLen = 0;
+      for (let k = sIdx; k < runEnd; k++) {
+        const fraction = totalRunLen > 0 ? accLen / totalRunLen : (k - sIdx) / (runEnd - sIdx);
+        segTimes[k] = Math.round(prevAnchorTime + fraction * (safeNextAnchorTime - prevAnchorTime));
+        accLen += Math.max(1, (event.segs[k].utf8 || '').trim().length);
+      }
+      sIdx = runEnd;
+    }
+  }
+
+  for (let k = 1; k < segTimes.length; k++) {
+    if (segTimes[k] < segTimes[k - 1]) {
+      segTimes[k] = segTimes[k - 1];
+    }
+  }
+
+  // Step 2: Normalize all segs into micro-tokens with accurate start timestamps
+  interface SegToken {
+    text: string;
+    startMs: number;
+    isLineBreak: boolean;
+  }
+
+  const countWords = (t: string) => (t.trim().match(/\S+/g) || []).length;
+  const isAbbr = (w: string) => /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e)\.$/i.test(w.trim());
+  const hasTerminal = (w: string) => /[.?!。？！]$/.test(w.trim()) && !isAbbr(w);
+  const hasClausePunct = (w: string) => /[,;:—\-"'，；：]$/.test(w.trim());
+  const isConnector = (w: string) =>
+    /^(and|but|or|so|because|which|that|when|where|if|while|like|with|for|to|in|on|about|as|then|after|before|since|until|although|though)$/i.test(
+      w.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '')
+    );
+
+  const tokens: SegToken[] = [];
+
+  for (let i = 0; i < event.segs.length; i++) {
+    const s = event.segs[i];
+    const rawText = s.utf8 || '';
+    if (!rawText) continue;
+
+    const segTimeMs = Math.min(eventEndMs, Math.max(tStartMs, segTimes[i] ?? tStartMs));
+    const nextSegTime = (i + 1 < segTimes.length) ? Math.max(segTimeMs, segTimes[i + 1]) : eventEndMs;
+
+    if (rawText.includes('\n')) {
+      const parts = rawText.split('\n');
+      for (let pIdx = 0; pIdx < parts.length; pIdx++) {
+        const partText = parts[pIdx];
+        const isBreak = pIdx > 0;
+        const partTimeMs = isBreak
+          ? Math.round(segTimeMs + (pIdx / parts.length) * (nextSegTime - segTimeMs))
+          : segTimeMs;
+        if (partText) {
+          tokens.push({
+            text: partText,
+            startMs: partTimeMs,
+            isLineBreak: isBreak
+          });
+        } else if (isBreak && tokens.length > 0) {
+          tokens[tokens.length - 1].isLineBreak = true;
+        }
+      }
+    } else {
+      tokens.push({
+        text: rawText,
+        startMs: segTimeMs,
+        isLineBreak: false
+      });
+    }
+  }
+
+  if (tokens.length === 0) {
+    return [];
+  }
+
+  // Step 3: Group tokens into concise, natural cues
+  const cues: SubtitleCue[] = [];
+  let curGroup: SegToken[] = [];
+
+  const flushGroup = (nextStartMs?: number) => {
+    if (curGroup.length === 0) return;
+    const groupTextRaw = curGroup.map(t => t.text).join('');
+    const decoded = cleanPunctuationSpacing(decodeHtmlEntities(groupTextRaw.replace(/<[^>]+>/g, ''))).trim();
+    if (decoded && isValidSubtitleText(decoded)) {
+      const gStart = curGroup[0].startMs / 1000;
+      let gEnd: number;
+      if (typeof nextStartMs === 'number' && nextStartMs > curGroup[0].startMs) {
+        gEnd = Math.min(eventEndMs / 1000, nextStartMs / 1000);
+      } else {
+        gEnd = eventEndMs / 1000;
+      }
+      gEnd = Math.max(gStart + 0.3, gEnd);
+
+      if (cues.length > 0) {
+        const prevCue = cues[cues.length - 1];
+        if (prevCue.end > gStart) {
+          prevCue.end = Math.max(prevCue.start + 0.2, gStart);
+        }
+      }
+      const adjustedStart = cues.length > 0 ? Math.max(cues[cues.length - 1].end, gStart) : gStart;
+      const maxEndSec = Math.max(adjustedStart + 0.2, eventEndMs / 1000);
+      const adjustedEnd = Math.min(maxEndSec, Math.max(adjustedStart + 0.3, gEnd));
+
+      const isZh = isChineseText(decoded);
+      cues.push({
+        id: cues.length + 1,
+        start: Math.round(adjustedStart * 1000) / 1000,
+        end: Math.round(adjustedEnd * 1000) / 1000,
+        textEn: isZh ? '' : decoded,
+        textZh: isZh ? decoded : ''
+      });
+    }
+    curGroup = [];
+  };
+
+  for (let idx = 0; idx < tokens.length; idx++) {
+    const tok = tokens[idx];
+    const tokWords = countWords(tok.text);
+    const tokChars = tok.text.length;
+
+    if (curGroup.length > 0) {
+      const curText = curGroup.map(t => t.text).join('');
+      const curWords = countWords(curText);
+      const curChars = curText.length;
+      const lastTok = curGroup[curGroup.length - 1];
+      const lastDur = Math.max(150, Math.min(500, countWords(lastTok.text) * 220));
+      const silenceGapMs = tok.startMs - (lastTok.startMs + lastDur);
+
+      const endsWithTerm = hasTerminal(curText);
+      const endsWithClause = hasClausePunct(curText);
+      const firstTokWord = tok.text.trim().split(/\s+/)[0] || '';
+      const isNextConn = isConnector(firstTokWord);
+
+      const isCjk = isCjkText(curText + tok.text);
+      const maxAllowedChars = isCjk ? 30 : 70;
+
+      const isSilencePause = silenceGapMs >= 350;
+      const isClauseBreak = endsWithClause && (curWords >= 4 || curWords + tokWords > 10);
+      const isConnBreak = isNextConn && (curWords >= 7 || curWords + tokWords > 12);
+      const isWordLimit = curWords >= 10 && tokWords >= 4;
+      const isHardLimit = curWords + tokWords > 14 || curChars + tokChars > maxAllowedChars;
+
+      if (tok.isLineBreak || endsWithTerm || isSilencePause || isClauseBreak || isConnBreak || isWordLimit || isHardLimit) {
+        flushGroup(tok.startMs);
+      }
+    }
+
+    curGroup.push(tok);
+  }
+
+  flushGroup(eventEndMs);
+
+  // Step 4: Final verification pass to ensure no individual cue exceeds 14 words / 70 chars (or 30 CJK chars)
+  const finalized: SubtitleCue[] = [];
+  for (const c of cues) {
+    const isCjk = isCjkText(c.textEn || c.textZh);
+    const maxChars = isCjk ? 30 : 70;
+    const wCount = countWords(c.textEn || c.textZh);
+    const cLen = (c.textEn || c.textZh).length;
+    if (wCount > 14 || cLen > maxChars) {
+      finalized.push(...splitLongCueSemantically(c, 12, maxChars));
+    } else {
+      finalized.push(c);
+    }
+  }
+
+  return sanitizeCues(finalized);
 }
 
 /**
  * Align original and translated YouTube JSON3 events into unified bilingual cues.
  * Uses interval overlap matching so that fine-grained acoustic ASR chunks receive
  * continuous translation coverage across multi-second translation intervals.
+ *
+ * R2 Standard:
+ * - Manual Captions: 1:1 exact native timestamps and intervals preserved without modification.
+ * - ASR Captions: concise Language Reactor assembly (8~12 words, max 14 words / 70 chars),
+ *   anchored tightly to native acoustic event and tOffsetMs timings.
  */
 export function alignBilingualJson3Events(
   origEvents: YouTubeJson3Event[],
-  transEvents: YouTubeJson3Event[]
+  transEvents: YouTubeJson3Event[],
+  isAsrHint?: boolean
 ): SubtitleCue[] {
   if (!origEvents || origEvents.length === 0) return [];
   if (!transEvents || transEvents.length === 0) {
-    return parseYouTubeJson3({ events: origEvents });
+    return parseYouTubeJson3({ events: origEvents }, undefined, isAsrHint);
   }
+
+  // Detect whether original events are ASR
+  const isAsr = isAsrHint ?? (
+    origEvents.some(e => Array.isArray(e.segs) && e.segs.some(s => typeof s.tOffsetMs === 'number' && s.tOffsetMs > 0)) ||
+    origEvents.some(e => Array.isArray(e.segs) && e.segs.some(s => typeof s.acAsrConf === 'number')) ||
+    (origEvents.length > 2 &&
+      origEvents.some(e => Array.isArray(e.segs) && e.segs.length > 1 && e.segs.some(s => s.utf8 === '\n')) &&
+      !origEvents.some(e => Array.isArray(e.segs) && e.segs.some(s => /[.?!。？！]$/.test((s.utf8 || '').trim()))))
+  );
 
   // Pre-parse valid translation events with normalized timestamps
   interface TransItem {
@@ -963,6 +1741,17 @@ export function alignBilingualJson3Events(
     const oEvent = origEvents[i];
     if (!oEvent.segs || oEvent.segs.length === 0) continue;
 
+    if (isAsr) {
+      const sliced = sliceYouTubeAsrEvent(oEvent);
+      for (const sc of sliced) {
+        rawCues.push({
+          ...sc,
+          id: rawCues.length + 1
+        });
+      }
+      continue;
+    }
+
     const oTextRaw = oEvent.segs.map(s => s.utf8 || '').join('');
     const oClean = cleanPunctuationSpacing(decodeHtmlEntities(oTextRaw.replace(/<[^>]+>/g, ''))).trim();
     if (!oClean || !isValidSubtitleText(oClean)) continue;
@@ -971,11 +1760,24 @@ export function alignBilingualJson3Events(
     const oDuration = (oEvent.dDurationMs || 0) / 1000;
     const oEnd = oDuration > 0 ? oStart + oDuration : oStart + 3.0;
 
+    const isZh = isChineseText(oClean);
+    rawCues.push({
+      id: rawCues.length + 1,
+      start: oStart,
+      end: oEnd,
+      textEn: isZh ? '' : oClean,
+      textZh: isZh ? oClean : ''
+    });
+  }
+
+  // Match translation to each raw cue
+  for (const cue of rawCues) {
+    const oStart = cue.start;
+    const oEnd = cue.end;
     let matchedTransText = '';
     let bestScore = -999;
     let bestTransIdx = -1;
 
-    // Search around transIndex for speed and temporal coherence
     const searchStart = Math.max(0, transIndex - 5);
     const searchEnd = Math.min(cleanTransList.length, transIndex + 15);
 
@@ -987,7 +1789,6 @@ export function alignBilingualJson3Events(
       const centerDiff = Math.abs((oStart + oEnd) / 2 - (candidate.start + candidate.end) / 2);
       const startDiff = Math.abs(oStart - candidate.start);
 
-      // Score prioritizing interval overlap, then center proximity, with direct start match bonus
       let score = overlapRatio * 10 - centerDiff;
       if (startDiff <= 0.3) score += 5;
 
@@ -1010,50 +1811,54 @@ export function alignBilingualJson3Events(
 
     const tClean = cleanPunctuationSpacing(decodeHtmlEntities(matchedTransText.replace(/<[^>]+>/g, ''))).trim();
 
-    const oIsCjk = isCjkText(oClean);
-    const tIsCjk = isCjkText(tClean);
+    const origText = cue.textEn || cue.textZh;
+    const oIsChinese = isChineseText(origText);
+    const tIsChinese = isChineseText(tClean);
 
-    let textEn = '';
-    let textZh = '';
-
-    if (oIsCjk && !tIsCjk) {
-      // Swapped: original track is Chinese, translation track is English
-      textEn = tClean;
-      textZh = oClean;
-    } else if (oIsCjk && tIsCjk) {
-      // Both are Chinese: never assign Chinese into textEn!
-      textEn = '';
-      textZh = oClean;
-    } else if (!oIsCjk && tIsCjk) {
-      // Normal: original is English, translation is Chinese
-      textEn = oClean;
-      textZh = tClean;
+    if (tClean) {
+      if (oIsChinese && !tIsChinese) {
+        cue.textZh = origText;
+        cue.textEn = tClean;
+      } else if (oIsChinese && tIsChinese) {
+        cue.textZh = origText;
+        cue.textEn = '';
+      } else {
+        cue.textEn = origText;
+        cue.textZh = tClean;
+      }
     } else {
-      // Both English or non-CJK
-      textEn = oClean;
-      textZh = '';
+      if (oIsChinese) {
+        cue.textEn = '';
+        cue.textZh = origText;
+      } else {
+        cue.textEn = origText;
+        cue.textZh = '';
+      }
     }
-
-    rawCues.push({
-      id: rawCues.length + 1,
-      start: oStart,
-      end: oEnd,
-      textEn,
-      textZh
-    });
   }
 
-  const merged = mergeYouTubeAsrCues(rawCues);
+  // R2: For manual captions, keep 1:1 original timestamps and cuts!
+  if (!isAsr) {
+    return sanitizeCues(rawCues);
+  }
+
+  // R1: For ASR captions, assemble concisely into 8~12 words (max 14 words / 70 chars)
+  const merged = assembleLongAsrSentences(rawCues);
   return sanitizeCues(merged);
 }
 
 /**
  * Parse YouTube timedtext JSON3 format into standard, non-overlapping SubtitleCue[]
  * Supports dual-track bilingual alignment when translationJsonContent is supplied.
+ *
+ * R2:
+ * - Manual Captions: 1:1 native timestamps and cuts preserved without altering.
+ * - ASR Captions: Language Reactor concise single-line standard (soft 8~12 words, max 14 words / 70 chars).
  */
 export function parseYouTubeJson3(
   jsonContent: string | object,
-  translationJsonContent?: string | object
+  translationJsonContent?: string | object,
+  isAsrHint?: boolean
 ): SubtitleCue[] {
   let data: YouTubeJson3Data;
   if (typeof jsonContent === 'string') {
@@ -1072,6 +1877,15 @@ export function parseYouTubeJson3(
     return [];
   }
 
+  // Detect whether events are ASR
+  const isAsr = isAsrHint ?? (
+    data.events.some(e => Array.isArray(e.segs) && e.segs.some(s => typeof s.tOffsetMs === 'number' && s.tOffsetMs > 0)) ||
+    data.events.some(e => Array.isArray(e.segs) && e.segs.some(s => typeof s.acAsrConf === 'number')) ||
+    (data.events.length > 2 &&
+      data.events.some(e => Array.isArray(e.segs) && e.segs.length > 1 && e.segs.some(s => s.utf8 === '\n')) &&
+      !data.events.some(e => Array.isArray(e.segs) && e.segs.some(s => /[.?!。？！]$/.test((s.utf8 || '').trim()))))
+  );
+
   // If translation JSON is provided, align bilingually
   if (translationJsonContent) {
     let transData: YouTubeJson3Data | null = null;
@@ -1084,7 +1898,7 @@ export function parseYouTubeJson3(
     }
 
     if (transData && Array.isArray(transData.events) && transData.events.length > 0) {
-      return alignBilingualJson3Events(data.events, transData.events);
+      return alignBilingualJson3Events(data.events, transData.events, isAsr);
     }
   }
 
@@ -1093,6 +1907,17 @@ export function parseYouTubeJson3(
 
   for (const event of data.events) {
     if (!event.segs || !Array.isArray(event.segs) || event.segs.length === 0) {
+      continue;
+    }
+
+    if (isAsr) {
+      const sliced = sliceYouTubeAsrEvent(event);
+      for (const sc of sliced) {
+        rawCues.push({
+          ...sc,
+          id: idCounter++
+        });
+      }
       continue;
     }
 
@@ -1109,7 +1934,7 @@ export function parseYouTubeJson3(
 
     if (rawLines.length === 1) {
       const line = rawLines[0];
-      if (isCjkText(line)) {
+      if (isChineseText(line)) {
         textZh = line;
       } else {
         textEn = line;
@@ -1117,8 +1942,8 @@ export function parseYouTubeJson3(
     } else {
       const line1 = rawLines[0];
       const line2 = rawLines.slice(1).join(' ');
-      const hasChinese1 = isCjkText(line1);
-      const hasChinese2 = isCjkText(line2);
+      const hasChinese1 = isChineseText(line1);
+      const hasChinese2 = isChineseText(line2);
 
       if (!hasChinese1 && hasChinese2) {
         textEn = line1;
@@ -1155,7 +1980,14 @@ export function parseYouTubeJson3(
     });
   }
 
-  return sanitizeCues(rawCues);
+  // R2: For manual captions, keep 1:1 original timestamps and cuts!
+  if (!isAsr) {
+    return sanitizeCues(rawCues);
+  }
+
+  // R1: For ASR captions, assemble concisely into 8~12 words (max 14 words / 70 chars)
+  const merged = assembleLongAsrSentences(rawCues);
+  return sanitizeCues(merged);
 }
 
 /**
@@ -1216,30 +2048,70 @@ export function parseYouTubeXml(xmlText: string): SubtitleCue[] {
 }
 
 /**
- * Parse raw SRT, VTT, or ASS subtitle string into SubtitleCue[]
+ * Parse raw SRT, VTT, ASS, SSA, LRC, SUB, TTML, or JSON subtitle string/buffer into SubtitleCue[]
  */
-export function parseSubtitleContent(rawText: string): SubtitleCue[] {
+export function parseSubtitleContent(rawInput: string | ArrayBuffer | Uint8Array): SubtitleCue[] {
   const cues: SubtitleCue[] = [];
-  if (!rawText || typeof rawText !== 'string') return cues;
+  if (!rawInput) return cues;
 
-  // 0. Detect and parse YouTube JSON3 timedtext
-  if (rawText.trim().startsWith('{') && rawText.includes('"events"')) {
-    const jsonCues = parseYouTubeJson3(rawText);
-    if (jsonCues.length > 0) return jsonCues;
+  let rawText = '';
+  if (typeof rawInput === 'string') {
+    rawText = rawInput;
+  } else if (rawInput instanceof ArrayBuffer || rawInput instanceof Uint8Array) {
+    rawText = decodeSubtitleBuffer(rawInput);
+  } else {
+    return cues;
   }
 
-  // 0.1 Detect and parse YouTube XML timedtext
+  if (!rawText || typeof rawText !== 'string') return cues;
+  rawText = rawText.replace(/^\uFEFF/, '').trim();
+
+  // 0. Detect and parse YouTube JSON3 or Bilibili BCC JSON timedtext
+  if (rawText.startsWith('{') || rawText.startsWith('[')) {
+    if (rawText.includes('"events"')) {
+      const jsonCues = parseYouTubeJson3(rawText);
+      if (jsonCues.length > 0) return jsonCues;
+    }
+    if (rawText.includes('"body"')) {
+      const bccCues = parseBccJsonSubtitles(rawText);
+      if (bccCues.length > 0) return bccCues;
+    }
+  }
+
+  // 0.1 Detect and parse YouTube XML / TTML / DFXP timedtext
   if (rawText.includes('<transcript') || rawText.includes('<timedtext')) {
     const xmlCues = parseYouTubeXml(rawText);
     if (xmlCues.length > 0) return xmlCues;
   }
-
-  // 1. Detect and parse ASS/SSA subtitle format
-  if (rawText.includes('[Events]') && rawText.includes('Dialogue:')) {
-    return parseAssSubtitles(rawText);
+  if (rawText.includes('<tt') || rawText.includes('xmlns="http://www.w3.org/ns/ttml"') || (rawText.includes('<p ') && rawText.includes('begin='))) {
+    const ttmlCues = parseTtmlSubtitles(rawText);
+    if (ttmlCues.length > 0) return ttmlCues;
   }
 
-  // 2. Normalize line endings and remove WebVTT header if present
+  // 1. Detect and parse ASS / SSA subtitle format
+  if (
+    /\[Events\]/i.test(rawText) ||
+    /\[V4\+?\s*Styles\]/i.test(rawText) ||
+    /\[Script\s*Info\]/i.test(rawText) ||
+    /^\s*Dialogue\s*:/im.test(rawText)
+  ) {
+    const assCues = parseAssSubtitles(rawText);
+    if (assCues.length > 0) return assCues;
+  }
+
+  // 2. Detect and parse MicroDVD SUB format (e.g. {100}{200}Hello or {00:01:23}{00:01:25}Hello)
+  if (/^\{[\d:.]+\}\{[\d:.]+\}/m.test(rawText)) {
+    const subCues = parseMicroDvdSubtitles(rawText);
+    if (subCues.length > 0) return subCues;
+  }
+
+  // 3. Detect and parse LRC Lyrics format (e.g. [01:23.45]Hello)
+  if (/^\[\d{1,2}:\d{2}[.:]\d{2,3}\]/m.test(rawText)) {
+    const lrcCues = parseLrcSubtitles(rawText);
+    if (lrcCues.length > 0) return lrcCues;
+  }
+
+  // 4. Normalize line endings and remove WebVTT header if present
   const text = rawText
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')

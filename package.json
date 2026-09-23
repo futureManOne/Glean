@@ -15,6 +15,7 @@
     "test": "bun test tests/",
     "test:unit": "bun test tests/",
     "test:e2e": "npx playwright test",
+    "icons": "node ./scripts/build_icons.mjs",
     "postinstall": "node ./node_modules/wxt/bin/wxt.mjs prepare"
   },
   "dependencies": {

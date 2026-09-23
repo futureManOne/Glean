@@ -74,6 +74,8 @@ export const en: TranslationSchema = {
     mixedGlossDensityLow: 'Low (1-2 words)',
     mixedGlossDensityMedium: 'Medium (2-4 words)',
     mixedGlossDensityHigh: 'High (4-8+ words)',
+    mixedModeShowTranslation: 'Show Full Sentence Translation',
+    mixedModeShowTranslationDesc: 'Show the full translated sentence underneath the mixed original line. Turn off for a cleaner, immersive gloss experience.',
     maskModeLabel: 'Listening Frosted Mask (Train Your Ears)',
     maskModeDesc: 'Translation subtitles are blurred by default and reveal clearly on hover',
     subtitleOpacity: 'Subtitle Background Opacity:'

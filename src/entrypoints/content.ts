@@ -28,18 +28,21 @@ export default defineContentScript({
         } catch (_) {}
         mountedUi = null;
       }
-      const existingEl = document.querySelector('language-reactor-overlay:not([data-vocabframe-controls-host]):not([data-vocabframe-transcript-host])');
+      const existingEl = document.querySelector('language-reactor-overlay:not([data-glean-controls-host]):not([data-glean-transcript-host]):not([data-vocabframe-controls-host]):not([data-vocabframe-transcript-host])');
       if (existingEl) {
         existingEl.remove();
       }
 
       // Also clean up any lingering embedded hosts and layout styling on non-video routes
-      const controlsHost = document.querySelector('language-reactor-overlay[data-vocabframe-controls-host]');
+      const controlsHost = document.querySelector('language-reactor-overlay[data-glean-controls-host], language-reactor-overlay[data-vocabframe-controls-host]');
       if (controlsHost) controlsHost.remove();
-      const transcriptHost = document.querySelector('language-reactor-overlay[data-vocabframe-transcript-host]');
+      const transcriptHost = document.querySelector('language-reactor-overlay[data-glean-transcript-host], language-reactor-overlay[data-vocabframe-transcript-host]');
       if (transcriptHost) transcriptHost.remove();
-      const activeSecondary = document.querySelector('[data-vocabframe-transcript-active]');
-      if (activeSecondary) activeSecondary.removeAttribute('data-vocabframe-transcript-active');
+      const activeSecondary = document.querySelector('[data-glean-transcript-active], [data-vocabframe-transcript-active]');
+      if (activeSecondary) {
+        activeSecondary.removeAttribute('data-glean-transcript-active');
+        activeSecondary.removeAttribute('data-vocabframe-transcript-active');
+      }
       const layoutStyle = document.getElementById('lr-host-layout-style');
       if (layoutStyle) layoutStyle.remove();
     };
@@ -67,7 +70,7 @@ export default defineContentScript({
       }
 
       // Already mounted and valid
-      if (document.querySelector('language-reactor-overlay:not([data-vocabframe-controls-host]):not([data-vocabframe-transcript-host])') && mountedUi) {
+      if (document.querySelector('language-reactor-overlay:not([data-glean-controls-host]):not([data-glean-transcript-host]):not([data-vocabframe-controls-host]):not([data-vocabframe-transcript-host])') && mountedUi) {
         return true;
       }
 
@@ -102,10 +105,10 @@ export default defineContentScript({
 
         ui.mount();
         mountedUi = ui;
-        console.log('[VocabFrame] Mounted on active video page.');
+        console.log('[Glean] Mounted on active video page.');
         return true;
       } catch (err) {
-        console.warn('[VocabFrame] Mount deferred:', err);
+        console.warn('[Glean] Mount deferred:', err);
         return false;
       } finally {
         isMounting = false;
@@ -154,7 +157,7 @@ export default defineContentScript({
       // Handle Fullscreen migration to prevent Top Layer from hiding overlay
       const handleFullscreenChange = () => {
         const fsElement = document.fullscreenElement || (document as any).webkitFullscreenElement;
-        const overlay = document.querySelector('language-reactor-overlay:not([data-vocabframe-controls-host]):not([data-vocabframe-transcript-host])');
+        const overlay = document.querySelector('language-reactor-overlay:not([data-glean-controls-host]):not([data-glean-transcript-host]):not([data-vocabframe-controls-host]):not([data-vocabframe-transcript-host])');
         if (!overlay) return;
 
         if (fsElement) {
