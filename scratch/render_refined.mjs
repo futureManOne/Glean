@@ -1,0 +1,318 @@
+import fs from 'fs';
+import path from 'path';
+import { chromium } from 'playwright-core';
+
+const outputDir = path.resolve('scratch/logo_preview');
+
+// Refined Version A: Masterwork Luminous Focus (极致光感视窗)
+// Tuned for maximum legibility at 16px, 32px, 48px, 128px
+const refinedASvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <!-- Background Gradient: Deep Obsidian & Cyber Slate -->
+    <linearGradient id="ra-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#17212e" />
+      <stop offset="50%" stop-color="#0f1723" />
+      <stop offset="100%" stop-color="#070c12" />
+    </linearGradient>
+
+    <!-- Chamfer Rim Light: Gives physical edge definition in dark browser tabs -->
+    <linearGradient id="ra-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.45)" />
+      <stop offset="35%" stop-color="rgba(56, 189, 248, 0.35)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.08)" />
+    </linearGradient>
+
+    <!-- Viewfinder Brackets: Electric Cyan to Emerald Glow -->
+    <linearGradient id="ra-bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="45%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <!-- Inner Ambient Teal Glow -->
+    <radialGradient id="ra-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.28" />
+      <stop offset="60%" stop-color="#06b6d4" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Golden Spark/Gem Gradient -->
+    <linearGradient id="ra-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+
+    <!-- Spark Bloom Filter -->
+    <filter id="ra-spark-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Container with Chamfer Rim -->
+  <rect x="3.5" y="3.5" width="121" height="121" rx="27" fill="url(#ra-bg)" stroke="url(#ra-rim)" stroke-width="2.5" />
+  
+  <!-- Subtle center-glow -->
+  <circle cx="64" cy="64" r="50" fill="url(#ra-glow)" />
+
+  <!-- Viewfinder Brackets (Reinforced line weight & smooth radius) -->
+  <g fill="none" stroke="url(#ra-bracket)" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top-Left -->
+    <path d="M 28 42 V 34 C 28 29.5 30.5 27 35 27 H 48" />
+    <!-- Top-Right -->
+    <path d="M 80 27 H 93 C 97.5 27 100 29.5 100 34 V 42" />
+    <!-- Bottom-Left -->
+    <path d="M 28 86 V 94 C 28 98.5 30.5 101 35 101 H 48" />
+    <!-- Bottom-Right -->
+    <path d="M 80 101 H 93 C 97.5 101 100 98.5 100 94 V 86" />
+  </g>
+
+  <!-- Subtitle Lines (High contrast) -->
+  <!-- Top Line: Primary Language Subtitle (Pure White) -->
+  <line x1="41" y1="52.5" x2="87" y2="52.5" stroke="#ffffff" stroke-width="9" stroke-linecap="round" />
+  <!-- Bottom Line: Secondary Language Subtitle (Soft Luminous Cyan) -->
+  <line x1="41" y1="73.5" x2="69" y2="73.5" stroke="#7dd3fc" stroke-width="9" stroke-linecap="round" />
+
+  <!-- Glean Spark of Insight (Substantial core + diamond flare for micro-size clarity) -->
+  <g filter="url(#ra-spark-glow)">
+    <!-- Starburst Flairs -->
+    <path d="M 87 63 Q 87 73.5 96.5 73.5 Q 87 73.5 87 84 Q 87 73.5 77.5 73.5 Q 87 73.5 87 63 Z" fill="url(#ra-gold)" />
+    <!-- Golden Core for strong micro-presence -->
+    <circle cx="87" cy="73.5" r="4.5" fill="#fde047" />
+    <!-- Hot center highlight -->
+    <circle cx="87" cy="73.5" r="2" fill="#ffffff" />
+  </g>
+</svg>`;
+
+// Refined Version B: Luminous Amber Gem (圆润微光晶石版)
+// - Uses a golden luminous pill/gem with high-visibility radial gradient
+const refinedBSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="rb-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182232" />
+      <stop offset="50%" stop-color="#0e1724" />
+      <stop offset="100%" stop-color="#060a10" />
+    </linearGradient>
+    <linearGradient id="rb-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.45)" />
+      <stop offset="40%" stop-color="rgba(56, 189, 248, 0.35)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.08)" />
+    </linearGradient>
+    <linearGradient id="rb-bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <radialGradient id="rb-gem" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="30%" stop-color="#fde047" />
+      <stop offset="70%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </radialGradient>
+    <radialGradient id="rb-gem-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect x="3.5" y="3.5" width="121" height="121" rx="27" fill="url(#rb-bg)" stroke="url(#rb-rim)" stroke-width="2.5" />
+  
+  <g fill="none" stroke="url(#rb-bracket)" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 28 42 V 34 C 28 29.5 30.5 27 35 27 H 48" />
+    <path d="M 80 27 H 93 C 97.5 27 100 29.5 100 34 V 42" />
+    <path d="M 28 86 V 94 C 28 98.5 30.5 101 35 101 H 48" />
+    <path d="M 80 101 H 93 C 97.5 101 100 98.5 100 94 V 86" />
+  </g>
+
+  <!-- Subtitle lines -->
+  <line x1="41" y1="52.5" x2="87" y2="52.5" stroke="#ffffff" stroke-width="9" stroke-linecap="round" />
+  <line x1="41" y1="73.5" x2="68" y2="73.5" stroke="#7dd3fc" stroke-width="9" stroke-linecap="round" />
+
+  <!-- Luminous Gem with Outer Aura -->
+  <circle cx="86.5" cy="73.5" r="14" fill="url(#rb-gem-glow)" />
+  <circle cx="86.5" cy="73.5" r="8" fill="url(#rb-gem)" />
+  <circle cx="84.5" cy="71.5" r="2.5" fill="#ffffff" opacity="0.8" />
+</svg>`;
+
+fs.writeFileSync(path.join(outputDir, 'refined_a.svg'), refinedASvg, 'utf8');
+fs.writeFileSync(path.join(outputDir, 'refined_b.svg'), refinedBSvg, 'utf8');
+
+// Build updated preview HTML comparing: Original vs Refined A vs Refined B
+const comparisonHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Glean (拾句) Logo 优化方案精修对比</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #090d14; color: #f1f5f9; padding: 36px; }
+    h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; color: #38bdf8; }
+    p.subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 32px; }
+    
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-bottom: 36px; }
+    .card { background: #111823; border: 1px solid #1e293b; border-radius: 18px; padding: 26px; display: flex; flex-direction: column; align-items: center; }
+    .card.highlight { border-color: #0284c7; box-shadow: 0 0 32px rgba(2, 132, 199, 0.25); background: #131d2b; }
+    .badge { font-size: 12px; padding: 4px 10px; border-radius: 12px; margin-bottom: 14px; font-weight: 600; }
+    .badge.orig { background: #334155; color: #cbd5e1; }
+    .badge.rec { background: #0284c7; color: #f0f9ff; }
+    .badge.alt { background: #059669; color: #d1fae5; }
+    
+    .logo-container { width: 140px; height: 140px; margin: 16px 0; }
+    .logo-container svg { width: 100%; height: 100%; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6)); }
+    
+    .card-title { font-size: 17px; font-weight: 600; margin-top: 10px; color: #f8fafc; }
+    .card-desc { font-size: 13px; color: #94a3b8; margin-top: 10px; text-align: center; line-height: 1.6; }
+
+    .section-title { font-size: 18px; font-weight: 600; margin: 32px 0 16px; color: #e2e8f0; }
+    
+    .mockup-row { display: flex; gap: 24px; margin-bottom: 24px; }
+    .mockup-box { flex: 1; padding: 22px; border-radius: 16px; border: 1px solid #2e384d; }
+    .mockup-dark { background: #202124; }
+    .mockup-light { background: #f1f3f4; color: #202124; }
+    
+    .browser-toolbar { display: flex; align-items: center; gap: 20px; padding: 12px 18px; border-radius: 12px; background: rgba(0,0,0,0.3); }
+    .mockup-light .browser-toolbar { background: rgba(255,255,255,0.8); border: 1px solid #dadce0; }
+    .toolbar-slot { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; }
+    .mockup-dark .toolbar-slot { color: #9aa0a6; }
+    .mockup-light .toolbar-slot { color: #5f6368; }
+    
+    .icon-16 svg { width: 16px; height: 16px; }
+    .icon-24 svg { width: 24px; height: 24px; }
+    .icon-32 svg { width: 32px; height: 32px; }
+
+    .scale-row { display: flex; gap: 24px; margin-top: 24px; padding: 20px; background: #111823; border-radius: 16px; border: 1px solid #1e293b; align-items: center; }
+  </style>
+</head>
+<body>
+  <h1>Glean (拾句) Logo 优化精修方案对比</h1>
+  <p class="subtitle">针对暗色模式边缘融合、原版平淡粗糙及微小尺寸辨识度问题深度调校</p>
+
+  <div class="grid">
+    <!-- Original -->
+    <div class="card">
+      <span class="badge orig">原版 (Current)</span>
+      <div class="logo-container">
+        ${fs.readFileSync(path.join(outputDir, 'original.svg'), 'utf8')}
+      </div>
+      <div class="card-title">原版设计</div>
+      <div class="card-desc">
+        • #111719 纯黑底色，暗色浏览器工具栏几乎无轮廓<br>
+        • 直角折线生硬，缺少圆角导角与渐变灵动感<br>
+        • 平涂黄色圆点与字幕条脱节
+      </div>
+    </div>
+
+    <!-- Refined A -->
+    <div class="card highlight">
+      <span class="badge rec">精修方案 A · 拾句星芒版 (强烈推荐)</span>
+      <div class="logo-container">
+        ${refinedASvg}
+      </div>
+      <div class="card-title">光影高光视窗 + 四角星芒</div>
+      <div class="card-desc">
+        • 渐变曜石深黑底 + <b>超细反差边缘光 (Chamfer Rim)</b>，暗底/亮底均极度醒目<br>
+        • <b>电光青绿渐变圆角导角框</b>，高精度视频镜头嗅探质感<br>
+        • <b>拾句灵感四角星芒 (✦)</b> + 金黄高光核心，微缩尺寸下闪烁清晰
+      </div>
+    </div>
+
+    <!-- Refined B -->
+    <div class="card">
+      <span class="badge alt">精修方案 B · 拾句晶石版</span>
+      <div class="logo-container">
+        ${refinedBSvg}
+      </div>
+      <div class="card-title">光影高光视窗 + 琥珀晶石</div>
+      <div class="card-desc">
+        • 渐变曜石深黑底 + 超细反差边缘光<br>
+        • 电光青绿渐变圆角导角框<br>
+        • <b>立体光感琥珀宝石光点</b>，温润饱满，微距光晕
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">真实 Chrome 浏览器环境极值测试 (暗色 #202124 与浅色 #F1F3F4)</div>
+  <div class="mockup-row">
+    <!-- Dark Mode Simulation -->
+    <div class="mockup-box mockup-dark">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 14px; color: #e8eaed;">Chrome 暗色工具栏 (24px 实际尺寸)</div>
+      <div class="browser-toolbar">
+        <div class="toolbar-slot icon-24">
+          ${fs.readFileSync(path.join(outputDir, 'original.svg'), 'utf8')}
+          <span>原版</span>
+        </div>
+        <div style="width: 1px; height: 32px; background: #3c4043;"></div>
+        <div class="toolbar-slot icon-24" style="color: #38bdf8; font-weight: 600;">
+          ${refinedASvg}
+          <span>方案 A (推荐)</span>
+        </div>
+        <div class="toolbar-slot icon-24">
+          ${refinedBSvg}
+          <span>方案 B</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Light Mode Simulation -->
+    <div class="mockup-box mockup-light">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 14px;">Chrome 浅色工具栏 (24px 实际尺寸)</div>
+      <div class="browser-toolbar">
+        <div class="toolbar-slot icon-24">
+          ${fs.readFileSync(path.join(outputDir, 'original.svg'), 'utf8')}
+          <span>原版</span>
+        </div>
+        <div style="width: 1px; height: 32px; background: #dadce0;"></div>
+        <div class="toolbar-slot icon-24" style="color: #0284c7; font-weight: 600;">
+          ${refinedASvg}
+          <span>方案 A (推荐)</span>
+        </div>
+        <div class="toolbar-slot icon-24">
+          ${refinedBSvg}
+          <span>方案 B</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">各级常用图标规格一览 (128px / 48px / 32px / 16px)</div>
+  <div class="scale-row">
+    <div style="text-align: center; margin-right: 20px;">
+      <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">128px (商店主图)</div>
+      <div style="width: 128px; height: 128px;">${refinedASvg}</div>
+    </div>
+    <div style="text-align: center; margin-right: 20px;">
+      <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">48px (管理页)</div>
+      <div style="width: 48px; height: 48px;">${refinedASvg}</div>
+    </div>
+    <div style="text-align: center; margin-right: 20px;">
+      <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">32px (视网膜屏)</div>
+      <div style="width: 32px; height: 32px;">${refinedASvg}</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">16px (扩展工具栏)</div>
+      <div style="width: 16px; height: 16px;">${refinedASvg}</div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+fs.writeFileSync(path.join(outputDir, 'refined_preview.html'), comparisonHtml, 'utf8');
+
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({
+  viewport: { width: 1200, height: 1050 },
+  deviceScaleFactor: 2
+});
+
+await page.goto('file:///' + path.join(outputDir, 'refined_preview.html').replace(/\\/g, '/'));
+await page.waitForTimeout(300);
+
+const screenshotPath = path.join(outputDir, 'refined_comparison.png');
+await page.screenshot({ path: screenshotPath, fullPage: true });
+console.log('Saved refined comparison screenshot to:', screenshotPath);
+
+await browser.close();

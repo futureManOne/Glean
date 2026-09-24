@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <!-- Background Gradient: Deep Obsidian & Cyber Slate -->
+    <linearGradient id="ra-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#17212e" />
+      <stop offset="50%" stop-color="#0f1723" />
+      <stop offset="100%" stop-color="#070c12" />
+    </linearGradient>
+
+    <!-- Chamfer Rim Light: Gives physical edge definition in dark browser tabs -->
+    <linearGradient id="ra-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.45)" />
+      <stop offset="35%" stop-color="rgba(56, 189, 248, 0.35)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.08)" />
+    </linearGradient>
+
+    <!-- Viewfinder Brackets: Electric Cyan to Emerald Glow -->
+    <linearGradient id="ra-bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="45%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <!-- Inner Ambient Teal Glow -->
+    <radialGradient id="ra-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.28" />
+      <stop offset="60%" stop-color="#06b6d4" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Golden Spark/Gem Gradient -->
+    <linearGradient id="ra-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+
+    <!-- Spark Bloom Filter -->
+    <filter id="ra-spark-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Container with Chamfer Rim -->
+  <rect x="3.5" y="3.5" width="121" height="121" rx="27" fill="url(#ra-bg)" stroke="url(#ra-rim)" stroke-width="2.5" />
+  
+  <!-- Subtle center-glow -->
+  <circle cx="64" cy="64" r="50" fill="url(#ra-glow)" />
+
+  <!-- Viewfinder Brackets (Reinforced line weight & smooth radius) -->
+  <g fill="none" stroke="url(#ra-bracket)" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top-Left -->
+    <path d="M 28 42 V 34 C 28 29.5 30.5 27 35 27 H 48" />
+    <!-- Top-Right -->
+    <path d="M 80 27 H 93 C 97.5 27 100 29.5 100 34 V 42" />
+    <!-- Bottom-Left -->
+    <path d="M 28 86 V 94 C 28 98.5 30.5 101 35 101 H 48" />
+    <!-- Bottom-Right -->
+    <path d="M 80 101 H 93 C 97.5 101 100 98.5 100 94 V 86" />
+  </g>
+
+  <!-- Subtitle Lines (High contrast) -->
+  <!-- Top Line: Primary Language Subtitle (Pure White) -->
+  <line x1="41" y1="52.5" x2="87" y2="52.5" stroke="#ffffff" stroke-width="9" stroke-linecap="round" />
+  <!-- Bottom Line: Secondary Language Subtitle (Soft Luminous Cyan) -->
+  <line x1="41" y1="73.5" x2="69" y2="73.5" stroke="#7dd3fc" stroke-width="9" stroke-linecap="round" />
+
+  <!-- Glean Spark of Insight (Substantial core + diamond flare for micro-size clarity) -->
+  <g filter="url(#ra-spark-glow)">
+    <!-- Starburst Flairs -->
+    <path d="M 87 63 Q 87 73.5 96.5 73.5 Q 87 73.5 87 84 Q 87 73.5 77.5 73.5 Q 87 73.5 87 63 Z" fill="url(#ra-gold)" />
+    <!-- Golden Core for strong micro-presence -->
+    <circle cx="87" cy="73.5" r="4.5" fill="#fde047" />
+    <!-- Hot center highlight -->
+    <circle cx="87" cy="73.5" r="2" fill="#ffffff" />
+  </g>
+</svg>

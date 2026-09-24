@@ -28,11 +28,15 @@ export default defineConfig({
     web_accessible_resources: [
       {
         resources: ['content-scripts/mainWorld.js'],
-        matches: ['*://*.youtube.com/*', '*://*.bilibili.com/*']
+        matches: ['*://*.youtube.com/*', '*://*.bilibili.com/*', '*://pan.quark.cn/*', '*://*.quark.cn/*']
       }
     ]
   },
   vite: () => ({
+    json: {
+      namedExports: false,
+      stringify: true
+    },
     build: {
       target: 'esnext',
       chunkSizeWarningLimit: 8_000

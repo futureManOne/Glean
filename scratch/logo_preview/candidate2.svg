@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c2-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="c2-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(56, 189, 248, 0.4)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+    </linearGradient>
+    <linearGradient id="c2-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="60%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="c2-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <radialGradient id="c2-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Squircle Base -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c2-bg)" stroke="url(#c2-rim)" stroke-width="2.5" />
+  <circle cx="64" cy="64" r="52" fill="url(#c2-glow)" />
+
+  <!-- Iconic G contour composed of dynamic fluid curves -->
+  <path d="M 88 40 C 76 26 50 26 38 38 C 24 52 24 76 38 90 C 50 102 76 102 88 88 C 94 81 96 74 96 66 L 60 66" 
+        fill="none" 
+        stroke="url(#c2-g)" 
+        stroke-width="11" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- Upper subtitle accent -->
+  <line x1="48" y1="50" x2="76" y2="50" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" opacity="0.95" />
+
+  <!-- Golden Spark of Insight in the center-right notch -->
+  <circle cx="86" cy="66" r="6" fill="url(#c2-gold)" />
+</svg>

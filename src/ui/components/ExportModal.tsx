@@ -56,7 +56,7 @@ export const ExportModal: React.FC = () => {
 
   const handleTriggerExport = (formatToUse?: ExportFormat) => {
     const format = formatToUse || selectedFormat;
-    const title = videoTitle || (scope === 'transcript' ? '全片台词剧本' : 'VocabFrame生词本');
+    const title = videoTitle || (scope === 'transcript' ? '全片台词剧本' : 'Glean生词本');
 
     try {
       if (scope === 'transcript') {
@@ -75,7 +75,7 @@ export const ExportModal: React.FC = () => {
       setFeedbackMessage(format === 'pdf' ? '已调起高保真打印窗口！' : '文件已开始下载！');
       setTimeout(() => setFeedbackMessage(null), 3500);
     } catch (err: any) {
-      console.error('[VocabFrame] Export failed:', err);
+      console.error('[Glean] Export failed:', err);
       alert(`导出遇到错误: ${err?.message || '未知错误'}`);
     }
   };

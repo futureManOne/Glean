@@ -237,7 +237,7 @@ export interface AppSettings {
   subtitleOpacity: number;       // Background opacity (0 ~ 1.0); 0 renders text only
   showEnglish: boolean;
   showChinese: boolean;
-  showTranslationInMixedMode?: boolean; // 中英混合模式下是否在底部额外显示整句中文翻译 (默认 true)
+  showTranslationInMixedMode?: boolean; // 中英混合模式下是否在底部额外显示整句中文翻译 (默认 false)
   mixedModeFilterLevel?: 'all_content' | 'advanced_only'; // 混合模式词汇过滤级别 (默认 'all_content')
   mixedGlossDensity?: MixedGlossDensity; // AI精翻覆盖密度: 'low'(轻度 1-2词) | 'medium'(标准 2-4词) | 'high'(密集 4-8+词), 默认 'medium'
   maskChinese: boolean;          // 听力盲听遮罩模式：模糊中文，鼠标悬停清晰

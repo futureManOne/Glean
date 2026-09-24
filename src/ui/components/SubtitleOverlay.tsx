@@ -356,7 +356,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                   {/* 1. English Sentence Line (Concise single line matching LR 1:1, or Mixed Mode) */}
                   {(settings.showEnglish || isMixedMode) && activeCue && activeCue.textEn && (
                     <div
-                      className={`font-bold tracking-wide text-center leading-normal lr-text-shadow text-white whitespace-normal break-normal ${
+                      className={`font-bold tracking-wide text-center leading-normal lr-text-shadow text-white whitespace-normal break-words ${
                         settings.maskEnglish
                           ? 'filter blur-[5px] hover:blur-none transition-all duration-200 cursor-pointer select-none hover:select-text'
                           : ''
@@ -366,7 +366,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                     >
                       {activeCue.tokens && activeCue.tokens.length > 0 ? (
                         activeCue.tokens.map((token) => {
-                          const isCjk = /[\u4e00-\u9fa5\u3400-\u4dbf]/.test(token.text);
+                          const isCjk = isCjkText(token.text);
                           const tokenSpacing = isCjk
                             ? (token.isKeyPhrase ? (token.isPhraseStart ? 'ml-0.5' : '') : 'mx-0 px-0')
                             : 'inline-block mx-0.5 px-0.5';
@@ -402,12 +402,12 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                     </div>
                   )}
 
-                  {/* 2. Translation Line (Concise single line, or fallback if mixed mode has no inline glosses) */}
+                  {/* 2. Translation Line (Concise single line, strictly controlled by settings in mixed mode) */}
                   {((!isMixedMode && (settings.subtitleMode === 'both' || settings.showChinese)) ||
-                    (isMixedMode && (settings.showTranslationInMixedMode || !hasAnyInlineGlosses))) && (
+                    (isMixedMode && Boolean(settings.showTranslationInMixedMode))) && (
                     activeCue?.textZh && activeCue.textZh.trim() !== (activeCue.textEn || '').trim() ? (
                       <div
-                        className={`text-white mt-1 font-semibold tracking-wide lr-text-shadow leading-normal text-center whitespace-normal break-normal ${
+                        className={`text-white mt-1 font-semibold tracking-wide lr-text-shadow leading-normal text-center whitespace-normal break-words ${
                           settings.maskChinese
                             ? 'filter blur-[5px] hover:blur-none transition-all duration-200 cursor-pointer select-none hover:select-text'
                             : ''

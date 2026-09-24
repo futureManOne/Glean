@@ -11,7 +11,7 @@ import {
 
 export default defineBackground(() => {
   chrome.runtime.onInstalled.addListener(() => {
-    console.log('[VocabFrame] Extension installed successfully.');
+    console.log('[Glean] Extension installed successfully.');
   });
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

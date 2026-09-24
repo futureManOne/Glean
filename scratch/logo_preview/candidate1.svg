@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="c1-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182230" />
+      <stop offset="50%" stop-color="#0f1724" />
+      <stop offset="100%" stop-color="#080d15" />
+    </linearGradient>
+    <linearGradient id="c1-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.3)" />
+      <stop offset="40%" stop-color="rgba(56, 189, 248, 0.2)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+    </linearGradient>
+    <linearGradient id="c1-bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <radialGradient id="c1-glow" cx="64" cy="64" r="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.22" />
+      <stop offset="70%" stop-color="#06b6d4" stop-opacity="0.03" />
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="c1-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <filter id="c1-star-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base container with rim highlight -->
+  <rect x="3" y="3" width="122" height="122" rx="28" fill="url(#c1-bg)" stroke="url(#c1-rim)" stroke-width="2.5" />
+  
+  <!-- Soft ambient radiance -->
+  <circle cx="64" cy="64" r="54" fill="url(#c1-glow)" />
+
+  <!-- High-precision viewfinder brackets (curved fillets) -->
+  <g fill="none" stroke="url(#c1-bracket)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Top-Left -->
+    <path d="M 28 42 V 34 C 28 30 30 28 34 28 H 48" />
+    <!-- Top-Right -->
+    <path d="M 80 28 H 94 C 98 28 100 30 100 34 V 42" />
+    <!-- Bottom-Left -->
+    <path d="M 28 86 V 94 C 28 98 30 100 34 100 H 48" />
+    <!-- Bottom-Right -->
+    <path d="M 80 100 H 94 C 98 100 100 98 100 94 V 86" />
+  </g>
+
+  <!-- Bilingual subtitle bars -->
+  <!-- Top line: Crisp primary subtitle -->
+  <line x1="41" y1="53" x2="87" y2="53" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <!-- Bottom line: Second language bar -->
+  <line x1="41" y1="73" x2="71" y2="73" stroke="#93c5fd" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Glean Spark of Insight (拾句灵感之星) -->
+  <g filter="url(#c1-star-glow)">
+    <path d="M 88 64 Q 88 73 97 73 Q 88 73 88 82 Q 88 73 79 73 Q 88 73 88 64 Z" fill="url(#c1-gold)" />
+    <circle cx="88" cy="73" r="2.5" fill="#ffffff" />
+  </g>
+</svg>

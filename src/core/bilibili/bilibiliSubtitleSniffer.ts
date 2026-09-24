@@ -132,7 +132,7 @@ export class BilibiliSubtitleSniffer {
     this.sniffNetworkRequests();
     this.scanStaticPageData();
 
-    console.log('[VocabFrame] Bilibili Subtitle Sniffer started.');
+    console.log('[Glean] Bilibili Subtitle Sniffer started.');
   }
 
   public stopSniffing() {
@@ -339,7 +339,7 @@ export class BilibiliSubtitleSniffer {
 
     if (cues.length > 0) {
       useAppStore.getState().setCues(cues);
-      console.log(`[VocabFrame] Loaded ${cues.length} cues from Bilibili TextTrack.`);
+      console.log(`[Glean] Loaded ${cues.length} cues from Bilibili TextTrack.`);
     }
   }
 
@@ -354,14 +354,14 @@ export class BilibiliSubtitleSniffer {
         const parsed = parseBilibiliSubtitleJson(text);
         if (parsed.length > 0) {
           useAppStore.getState().setCues(parsed);
-          console.log(`[VocabFrame] Loaded ${parsed.length} cues from Bilibili Subtitle JSON.`);
+          console.log(`[Glean] Loaded ${parsed.length} cues from Bilibili Subtitle JSON.`);
           return;
         }
       }
 
       const cues = parseSubtitleContent(text);
       if (cues.length > 0) {
-        useAppStore.getState().loadSubtitleFileContent(text, label);
+        useAppStore.getState().loadSubtitleFileContent(text, label, false);
       }
     } catch (_) {}
   }
@@ -507,7 +507,7 @@ export class BilibiliSubtitleSniffer {
       }
 
       useAppStore.getState().setCues(enCues);
-      console.log(`[VocabFrame] Loaded and merged dual-track subtitles (${enCues.length} cues) from Bilibili.`);
+      console.log(`[Glean] Loaded and merged dual-track subtitles (${enCues.length} cues) from Bilibili.`);
     } catch (_) {
       if (enSub.subtitle_url) {
         const fullUrl = enSub.subtitle_url.startsWith('//') ? `https:${enSub.subtitle_url}` : enSub.subtitle_url;

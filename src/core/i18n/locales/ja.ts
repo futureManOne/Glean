@@ -74,6 +74,8 @@ export const ja: TranslationSchema = {
     mixedGlossDensityLow: '低 (1-2語)',
     mixedGlossDensityMedium: '標準 (2-4語)',
     mixedGlossDensityHigh: '高 (4-8+語)',
+    mixedModeShowTranslation: '全文翻訳を表示',
+    mixedModeShowTranslationDesc: 'ハイブリッド字幕の下に全文翻訳を表示します。オフにすると原文と語句注釈のみが表示され、すっきりと学習に集中できます。',
     maskModeLabel: 'リスニングブラインドマスク (字幕に頼らず耳を鍛える)',
     maskModeDesc: '翻訳字幕をデフォルトでぼかし、マウスオーバーでクリアに表示',
     subtitleOpacity: '字幕背景の不透明度:'
@@ -140,7 +142,8 @@ export const ja: TranslationSchema = {
     exportJson: 'JSONエクスポート',
     exportCsv: 'CSVエクスポート',
     exportSuccess: 'エクスポート成功！',
-    clearAll: 'すべて削除'
+    clearAll: 'すべて削除',
+    importSubtitles: '字幕ファイルをインポート'
   },
 
   // Popup Window

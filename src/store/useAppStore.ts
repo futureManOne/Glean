@@ -20,6 +20,15 @@ import { VideoPlayerAdapter } from '@/core/player/BaseAdapter';
 import { sanitizeVideoTitle } from '@/core/youtube/titleSanitizer';
 import { evaluateAutoPause, calculateCueTargetPauseTime, areCueIdsEqual } from '@/core/player/autoPauseEngine';
 
+export interface DetectedFolderSubtitle {
+  name: string;
+  fid?: string;
+  shareId?: string;
+  downloadUrl?: string;
+  content?: string;
+  size?: number;
+}
+
 interface AppStoreState {
   // Video & Subtitle state
   videoTitle: string;
@@ -35,6 +44,7 @@ interface AppStoreState {
   isAdPlaying: boolean;
 
   currentVideoId: string | null;
+  isUserImportedSubtitle: boolean;
 
   // UI state
   isSidePanelOpen: boolean;
@@ -59,6 +69,8 @@ interface AppStoreState {
   isLoadingSentenceAnalysis: boolean;
   isSentenceAnalysisOpen: boolean;
 
+  // Detected subtitles from current cloud folder (e.g. Quark Pan same directory)
+  detectedFolderSubtitles: DetectedFolderSubtitle[];
 
   // Saved words & vocabulary
   savedWords: SavedWord[];
@@ -67,6 +79,7 @@ interface AppStoreState {
   settings: AppSettings;
 
   // Actions
+  resetVideoSession: (newVideoId?: string, newTitle?: string) => void;
   setVideoId: (videoId: string | null) => void;
   setVideoTitle: (title: string) => void;
   setCues: (cues: SubtitleCue[], videoId?: string) => void;
@@ -76,7 +89,9 @@ interface AppStoreState {
   resetMixedGlossCuesAndRetranslate: () => void;
   updateCueTranslation: (cueId: number | string, textZh: string) => void;
   loadDemoSubtitles: () => void;
-  loadSubtitleFileContent: (rawContent: string, fileName?: string) => void;
+  loadSubtitleFileContent: (rawContent: string | ArrayBuffer | Uint8Array, fileName?: string, isUserImport?: boolean) => void;
+  setDetectedFolderSubtitles: (subs: DetectedFolderSubtitle[]) => void;
+  loadDetectedFolderSubtitle: (sub: DetectedFolderSubtitle) => Promise<void>;
   adjustTimeOffset: (offsetDelta: number) => void;
   updateCurrentTime: (time: number, player?: VideoPlayerAdapter) => void;
   seekToCue: (index: number, player: VideoPlayerAdapter) => void;
@@ -117,7 +132,7 @@ interface AppStoreState {
 }
 
 export const STORAGE_KEY_SETTINGS = 'lr_app_settings';
-export const STORAGE_KEY_SECURITY_MIGRATION = 'vocabframe_security_migration_v1';
+export const STORAGE_KEY_SECURITY_MIGRATION = 'glean_security_migration_v1';
 
 const DEFAULT_SETTINGS: AppSettings = {
   pluginEnabled: true,
@@ -136,7 +151,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   subtitleOpacity: 0.85,
   showEnglish: true,
   showChinese: true,
-  showTranslationInMixedMode: true,
+  showTranslationInMixedMode: false,
   mixedModeFilterLevel: 'all_content',
   mixedGlossDensity: 'medium',
   maskChinese: false,
@@ -271,35 +286,78 @@ export const useAppStore = create<AppStoreState>((set, get) => {
     isLoadingSentenceAnalysis: false,
     isSentenceAnalysisOpen: false,
 
+    detectedFolderSubtitles: [],
+    setDetectedFolderSubtitles: (subs) => set({ detectedFolderSubtitles: subs }),
+    loadDetectedFolderSubtitle: async (sub) => {
+      if (sub.content) {
+        get().loadSubtitleFileContent(sub.content, sub.name, true);
+        return;
+      }
+      if (sub.downloadUrl) {
+        try {
+          const res = await fetch(sub.downloadUrl, { credentials: 'include' });
+          if (res.ok) {
+            const buf = await res.arrayBuffer();
+            get().loadSubtitleFileContent(buf, sub.name, true);
+            return;
+          }
+        } catch (err) {
+          console.warn('[Glean] Failed to download folder subtitle:', err);
+        }
+      }
+      if (typeof window !== 'undefined') {
+        window.postMessage({
+          type: '__LR_LOAD_QUARK_SUBTITLE_FID__',
+          fileInfo: sub
+        }, '*');
+      }
+    },
+
     savedWords: INITIAL_SAVED_WORDS,
     settings: DEFAULT_SETTINGS,
     isAdPlaying: false,
     currentVideoId: null,
+    isUserImportedSubtitle: false,
 
     setIsAdPlaying: (isAdPlaying) => {
       set({ isAdPlaying, lastPausedCueId: null });
     },
 
+    resetVideoSession: (newVideoId, newTitle) => {
+      currentSegmentationSessionId++;
+      clearSentenceAnalysisCache();
+      abortActiveSentenceAnalysis();
+      import('@/core/ai/bilingualTranslator').then(({ bilingualTranslator }) => {
+        bilingualTranslator.reset();
+      }).catch(() => {});
+      import('@/core/ai/mixedGlossGenerator').then(({ mixedGlossGenerator }) => {
+        mixedGlossGenerator.clearCache();
+        mixedGlossGenerator.cancelBatchTranslation();
+      }).catch(() => {});
+
+      set({
+        currentVideoId: newVideoId || null,
+        videoTitle: newTitle ? sanitizeVideoTitle(newTitle) : '',
+        cues: [],
+        currentCueIndex: -1,
+        currentTime: 0,
+        lastPausedCueId: null,
+        subtitleTimeOffset: 0,
+        isUserImportedSubtitle: false,
+        selectedSentenceCue: null,
+        sentenceAnalysis: null,
+        streamingAnalysisText: '',
+        isStreamingAnalysis: false,
+        sentenceAnalysisError: null,
+        isLoadingSentenceAnalysis: false,
+        isSentenceAnalysisOpen: false
+      });
+    },
+
     setVideoId: (videoId) => {
       const prev = get().currentVideoId;
       if (prev && videoId && prev !== videoId) {
-        clearSentenceAnalysisCache();
-        abortActiveSentenceAnalysis();
-        set({
-          currentVideoId: videoId,
-          cues: [],
-          currentCueIndex: -1,
-          currentTime: 0,
-          lastPausedCueId: null,
-          videoTitle: '',
-          selectedSentenceCue: null,
-          sentenceAnalysis: null,
-          streamingAnalysisText: '',
-          isStreamingAnalysis: false,
-          sentenceAnalysisError: null,
-          isLoadingSentenceAnalysis: false,
-          isSentenceAnalysisOpen: false
-        });
+        get().resetVideoSession(videoId);
         return;
       }
       set({ currentVideoId: videoId });
@@ -571,7 +629,7 @@ export const useAppStore = create<AppStoreState>((set, get) => {
       set({ cues: processCuesWithWords(DEMO_SUBTITLES, currentWords), currentCueIndex: 0, subtitleTimeOffset: 0 });
     },
 
-    loadSubtitleFileContent: (rawContent, fileName) => {
+    loadSubtitleFileContent: (rawContent, fileName, isUserImport = true) => {
       currentSegmentationSessionId++;
       const parsed = parseSubtitleContent(rawContent);
       if (parsed && parsed.length > 0) {
@@ -597,10 +655,11 @@ export const useAppStore = create<AppStoreState>((set, get) => {
           cues: processed,
           currentCueIndex: targetIndex,
           subtitleTimeOffset: 0,
+          isUserImportedSubtitle: Boolean(isUserImport),
           videoTitle: fileName ? sanitizeVideoTitle(fileName) : get().videoTitle,
           lastPausedCueId: null
         });
-        console.log(`[VocabFrame] Loaded ${parsed.length} subtitle cues.`);
+        console.log(`[Glean] Loaded ${parsed.length} subtitle cues.`);
 
         // Proactively trigger sliding window AI translation around current playback head
         const apiKey = (get().settings?.apiKey || '').trim();
@@ -1179,10 +1238,10 @@ export const useAppStore = create<AppStoreState>((set, get) => {
 // Asynchronous hydration and live sync with chrome.storage.local
 if (typeof chrome !== 'undefined' && chrome?.storage?.local) {
   try {
-    chrome.storage.local.get([STORAGE_KEY_SETTINGS, STORAGE_KEY_SECURITY_MIGRATION], (res) => {
+    chrome.storage.local.get([STORAGE_KEY_SETTINGS, STORAGE_KEY_SECURITY_MIGRATION, 'vocabframe_security_migration_v1'], (res) => {
       if (chrome.runtime?.lastError) return;
       const storedSettings = res?.[STORAGE_KEY_SETTINGS];
-      const needsCredentialReset = !res?.[STORAGE_KEY_SECURITY_MIGRATION];
+      const needsCredentialReset = !res?.[STORAGE_KEY_SECURITY_MIGRATION] && !res?.['vocabframe_security_migration_v1'];
       if (storedSettings) {
         const migratedSettings = needsCredentialReset
           ? { ...storedSettings, apiKey: '' }

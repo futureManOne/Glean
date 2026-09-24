@@ -163,7 +163,6 @@ const WordPopupInner: React.FC = () => {
     !wordExplanation?.isFallback &&
     (wordExplanation?.source === 'grok-ai' ||
      wordExplanation?.source === 'google' ||
-     wordExplanation?.source === 'ai' ||
      Boolean(wordExplanation?.aiModel) ||
      (Boolean(wordExplanation?.contextIntent) && wordExplanation?.source !== 'offline-rich') ||
      (Boolean(wordExplanation?.contextExplanation) &&

@@ -34,6 +34,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
     removeSavedWord,
     loadDemoSubtitles,
     loadSubtitleFileContent,
+    detectedFolderSubtitles,
+    loadDetectedFolderSubtitle,
     settings,
     setSettingsModalOpen,
     setExportModalOpen,
@@ -48,6 +50,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
   const [autoScroll, setAutoScroll] = useState(true);
   const [savedFilter, setSavedFilter] = useState<'all' | 'learning' | 'known' | 'mastered'>('all');
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showImportMenu, setShowImportMenu] = useState(false);
+  const importMenuRef = useRef<HTMLDivElement>(null);
   const [batchProgress, setBatchProgress] = useState<BatchTranslationProgress>(
     bilingualTranslator.getBatchProgress()
   );
@@ -56,12 +60,23 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
   const isBilibili = hostname.includes('bilibili.com');
   const [embeddedMount, setEmbeddedMount] = useState<HTMLElement | null>(null);
 
+  useEffect(() => {
+    if (!showImportMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (importMenuRef.current && !importMenuRef.current.contains(e.target as Node)) {
+        setShowImportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showImportMenu]);
+
   // Replace recommendations in their own column (YouTube #secondary, Bilibili .right-container),
   // preserving host nodes for clean restoration when sidebar is closed.
   useEffect(() => {
     if ((!isYouTube && !isBilibili) || !isSidePanelOpen) return;
     const host = document.createElement('language-reactor-overlay');
-    host.dataset.vocabframeTranscriptHost = 'true';
+    host.dataset.gleanTranscriptHost = 'true';
     const shadow = host.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
     style.textContent = tailwindCss + ':host{display:block;width:100%;min-width:0}';
@@ -71,17 +86,28 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
 
     const replacementStyle = document.createElement('style');
     replacementStyle.textContent = `
-      #secondary[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      #secondary-inner[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      .right-container[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      #right-container[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      .recommend-list-v1[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      #recom_list[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      .plp-r[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      .r-con[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      .playlist-container[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      .side-container[data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]),
-      [class*="recommend-list"][data-vocabframe-transcript-active] > :not([data-vocabframe-transcript-host]) {
+      #secondary[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      #secondary-inner[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .right-container[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      #right-container[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .recommend-list-v1[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      #recom_list[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .plp-r[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .r-con[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .playlist-container[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .side-container[data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      [class*="recommend-list"][data-glean-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      #secondary[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      #secondary-inner[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .right-container[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      #right-container[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .recommend-list-v1[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      #recom_list[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .plp-r[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .r-con[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .playlist-container[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      .side-container[data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]),
+      [class*="recommend-list"][data-vocabframe-transcript-active] > :not([data-glean-transcript-host]):not([data-vocabframe-transcript-host]) {
         display: none !important;
       }
     `;
@@ -130,10 +156,12 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
       }
 
       if (next !== secondary) {
+        secondary?.removeAttribute('data-glean-transcript-active');
         secondary?.removeAttribute('data-vocabframe-transcript-active');
         secondary = next;
       }
       if (secondary) {
+        secondary.setAttribute('data-glean-transcript-active', '');
         secondary.setAttribute('data-vocabframe-transcript-active', '');
         if (host.parentElement !== secondary) secondary.prepend(host);
         setEmbeddedMount(mount);
@@ -168,6 +196,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
       window.removeEventListener('resize', syncSecondary);
       document.removeEventListener('fullscreenchange', syncSecondary);
       document.removeEventListener('webkitfullscreenchange', syncSecondary);
+      secondary?.removeAttribute('data-glean-transcript-active');
       secondary?.removeAttribute('data-vocabframe-transcript-active');
       host.remove();
       replacementStyle.remove();
@@ -199,12 +228,13 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const text = event.target?.result as string;
-        if (text) {
-          loadSubtitleFileContent(text, file.name);
+        const buffer = event.target?.result as ArrayBuffer;
+        if (buffer) {
+          loadSubtitleFileContent(buffer, file.name, true);
         }
       };
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
+      e.target.value = '';
     }
   };
 
@@ -318,6 +348,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
 
   const panel = (
     <div
+      data-glean-transcript
       data-vocabframe-transcript
       style={panelStyle}
       className={`z-[99999] flex flex-col select-none overflow-hidden bg-[#101214] text-gray-200 shadow-2xl font-sans ${isEmbedded ? 'rounded-lg border border-white/10' : 'border-l border-white/10'}`}
@@ -378,6 +409,85 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
           >
             跟随
           </button>
+
+          {/* 导入字幕按钮 (本地上传 / 网盘同目录字幕快捷载入) */}
+          <div className="relative" ref={importMenuRef}>
+            <button
+              type="button"
+              onClick={() => {
+                if (detectedFolderSubtitles && detectedFolderSubtitles.length > 0) {
+                  setShowImportMenu(prev => !prev);
+                } else {
+                  fileInputRef.current?.click();
+                }
+              }}
+              className="p-1 hover:text-white rounded hover:bg-white/10 transition-colors relative"
+              title={
+                detectedFolderSubtitles && detectedFolderSubtitles.length > 0
+                  ? '导入字幕（本地上传 / 选择同目录字幕）'
+                  : (t.transcript.importSubtitles || '导入本地字幕文件')
+              }
+            >
+              <Upload size={16} />
+              {detectedFolderSubtitles && detectedFolderSubtitles.length > 0 && (
+                <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400 ring-2 ring-[#171a1d]" />
+              )}
+            </button>
+
+            {/* 同目录字幕下拉浮层 */}
+            {showImportMenu && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-[#1b1e22] border border-white/15 rounded-xl shadow-2xl z-[100000] p-2 text-xs">
+                <div className="flex items-center justify-between px-2 py-1.5 border-b border-white/10 text-gray-300 font-medium">
+                  <div className="flex items-center space-x-1.5 text-cyan-400 font-semibold">
+                    <Sparkles size={13} />
+                    <span>网盘同目录字幕</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400 font-mono bg-white/5 px-1.5 py-0.5 rounded">
+                    {detectedFolderSubtitles.length} 个
+                  </span>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto py-1 space-y-1">
+                  {detectedFolderSubtitles.map((sub, sIdx) => (
+                    <button
+                      key={sIdx}
+                      type="button"
+                      onClick={() => {
+                        loadDetectedFolderSubtitle(sub);
+                        setShowImportMenu(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-white/10 text-gray-200 hover:text-white flex items-center justify-between group transition-colors"
+                    >
+                      <div className="flex items-center space-x-2 truncate mr-2">
+                        <FileText size={13} className="text-cyan-400/80 shrink-0" />
+                        <span className="truncate text-[11px]" title={sub.name}>
+                          {sub.name}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-cyan-400/80 group-hover:text-cyan-300 group-hover:underline shrink-0 font-medium">
+                        载入
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-1.5 mt-1 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportMenu(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="w-full py-1.5 px-2 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg text-xs font-medium flex items-center justify-center space-x-1.5 transition-colors"
+                  >
+                    <Upload size={13} />
+                    <span>从本地上传字幕文件...</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={() => setExportModalOpen(true)}
@@ -390,7 +500,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
             type="button"
             onClick={() => setSettingsModalOpen(true)}
             className="p-1 hover:text-white rounded hover:bg-white/10 transition-colors"
-            title={t.controlBar.settings || 'VocabFrame 设置'}
+            title={t.controlBar.settings || 'Glean 设置'}
           >
             <Settings size={16} />
           </button>
@@ -598,9 +708,34 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
                     {sanitizeVideoTitle(videoTitle) ? `《${sanitizeVideoTitle(videoTitle)}》` : '当前视频'} 暂未载入字幕
                   </div>
                   <p className="text-xs text-gray-300 mt-1.5 leading-relaxed max-w-[280px] mx-auto">
-                    请导入与本集视频匹配的字幕文件（.srt / .vtt），即可开启实时双语对照、单句复读与单词点查。
+                    支持 .ass / .ssa / .srt / .vtt / .lrc / .sub / .ttml 等格式，导入后即可开启实时双语对照、单句复读与单词点查。
                   </p>
                 </div>
+
+                {detectedFolderSubtitles && detectedFolderSubtitles.length > 0 && (
+                  <div className="w-full max-w-[280px] p-3 mb-1 rounded-xl border border-cyan-500/30 bg-cyan-950/40 text-left">
+                    <div className="flex items-center space-x-1.5 text-xs font-semibold text-cyan-300 mb-2">
+                      <Sparkles size={14} className="text-cyan-400" />
+                      <span>发现网盘同目录字幕</span>
+                    </div>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-0.5">
+                      {detectedFolderSubtitles.map((sub, sIdx) => (
+                        <div key={sIdx} className="flex items-center justify-between text-xs text-gray-200 bg-white/5 hover:bg-white/10 rounded-lg px-2.5 py-1.5 transition-colors">
+                          <span className="truncate max-w-[150px] font-mono text-[11px] text-gray-300" title={sub.name}>
+                            {sub.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => loadDetectedFolderSubtitle(sub)}
+                            className="ml-2 px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[11px] font-medium transition-colors shrink-0 shadow-sm"
+                          >
+                            一键载入
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-2 flex flex-col space-y-2.5 w-full max-w-[240px]">
                   <button
@@ -609,7 +744,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
                     className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold flex items-center justify-center space-x-2 shadow-lg transition-colors"
                   >
                     <Upload size={16} />
-                    <span>导入本地字幕 (.srt / .vtt)</span>
+                    <span>导入本地字幕文件</span>
                   </button>
 
                   <button
@@ -621,14 +756,6 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
                     <span>体验示例双语字幕</span>
                   </button>
                 </div>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept=".srt,.vtt,.ass,.txt"
-                  className="hidden"
-                />
               </div>
             )
           ) : (
@@ -727,8 +854,10 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
                       )}
                     </div>
 
-                    {/* Translation Line (hidden if identical to primary dialogue line to prevent duplicate echo) */}
-                    {cue.textZh && cue.textZh.trim() !== (cue.textEn || '').trim() && (
+                    {/* Translation Line (hidden if identical to primary dialogue line, or hidden in mixed mode when showTranslationInMixedMode is off) */}
+                    {(!isMixedMode || Boolean(settings.showTranslationInMixedMode)) &&
+                      cue.textZh &&
+                      cue.textZh.trim() !== (cue.textEn || '').trim() && (
                       <div
                         className="text-gray-400 leading-normal"
                         style={{ fontSize: `${Math.max(12, transcriptFontSize - 2)}px` }}
@@ -854,9 +983,18 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
           <span><kbd className="bg-[#242429] px-1.5 py-0.5 rounded text-xs text-gray-300 font-mono">D</kbd> 下句</span>
         </div>
         <div className="text-gray-500 font-medium">
-          <span>VocabFrame</span>
+          <span>Glean</span>
         </div>
       </div>
+
+      {/* Hidden file input: Always mounted in DOM so header and empty-state buttons can trigger it */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".srt,.vtt,.ass,.ssa,.lrc,.sub,.ttml,.xml,.json,.bcc,.txt"
+        className="hidden"
+      />
     </div>
   );
   if (isYouTube) {

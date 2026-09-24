@@ -68,7 +68,7 @@ test.afterAll(async () => {
   }
 });
 
-test.describe('VocabFrame E2E Test Suite', () => {
+test.describe('Glean E2E Test Suite', () => {
   test('should load extension and mount overlay on video player', async ({ context }) => {
     const page = context.pages().length > 0 ? context.pages()[0] : await context.newPage();
 

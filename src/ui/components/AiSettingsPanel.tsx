@@ -138,7 +138,7 @@ export function AiSettingsPanel() {
       </button>}
       {needsPermission && <button type="button" className="text-xs text-cyan-300 underline underline-offset-4" onClick={async () => {
         try { await chrome.runtime.sendMessage({ type: 'OPEN_AI_SETTINGS' }); }
-        catch { setMessage('请点击浏览器工具栏中的 VocabFrame 图标，在扩展设置中授权此 AI 服务。'); }
+        catch { setMessage('请点击浏览器工具栏中的 Glean 图标，在扩展设置中授权此 AI 服务。'); }
       }}>打开扩展设置授权 AI 服务</button>}
       {message && <p role="status" className="break-words text-xs text-gray-200">{message}</p>}
     </section>

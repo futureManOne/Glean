@@ -159,6 +159,26 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
             </p>
           </div>
 
+          {/* 中英混合模式整句中文翻译开关 */}
+          {settings.subtitleMode === 'mixed' && (
+            <label className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-950/20 p-3.5 transition-all">
+              <div className="pr-4">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-cyan-200">
+                  <span>{t.settingsModal.mixedModeShowTranslation}</span>
+                </span>
+                <span className="mt-1 block text-[11px] leading-relaxed text-gray-400">
+                  {t.settingsModal.mixedModeShowTranslationDesc}
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={Boolean(settings.showTranslationInMixedMode)}
+                onChange={(event) => updateSettings({ showTranslationInMixedMode: event.target.checked })}
+                className="h-4 w-4 shrink-0 rounded accent-cyan-400 cursor-pointer"
+              />
+            </label>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <label className="space-y-2">
               <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.subtitleFontSize}</span><b className="font-mono text-cyan-300">{settings.subtitleFontSize || 18}px</b></span>

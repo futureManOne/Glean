@@ -22,18 +22,19 @@ export interface TimedWord {
  * generating timestamps.
  */
 export const SEGMENTATION_SYSTEM_PROMPT = `You are an expert linguistic speech segmentation and punctuation restoration assistant.
-Your task is to take unpunctuated or fragmented speech transcript and segment it into COMPLETE, MEANINGFUL GRAMMATICAL SENTENCES.
+Your task is to take unpunctuated or fragmented speech transcript and segment it into CONCISE, NATURAL GRAMMATICAL SENTENCES SUITABLE FOR VIDEO SUBTITLES.
 
 Rules:
-1. Complete grammatical sentences: Keep main clauses and subordinate clauses (adverbial clauses, relative clauses, noun clauses, condition/concession) together in a single coherent sentence. NEVER mechanically slice or chop sentences based on word count.
-2. Vocabulary fidelity: Keep the original spoken words intact. Do NOT paraphrase, summarize, omit words, or insert new vocabulary.
-3. Punctuation & Casing: Restore natural capitalization (proper nouns, beginnings of sentences) and appropriate sentence terminators ('.', '?', '!'), as well as natural commas inside complex sentences.
+1. Sentence length & natural breaks: Ideal sentence length is 8~12 words, and MUST NOT exceed 14 words. For compound or complex thoughts, break naturally at coordinating conjunctions ('and', 'but', 'so', 'or'), clause conjunctions ('because', 'when', 'while', 'if', 'that', 'which'), or punctuation pauses. NEVER generate screen-dominating run-on sentences over 14 words.
+2. Vocabulary fidelity: Keep ALL original spoken words intact in their exact spoken order. Do NOT paraphrase, summarize, omit words, or insert new vocabulary.
+3. Punctuation & Casing: Restore natural capitalization (proper nouns, beginnings of sentences) and appropriate punctuation ('.', '?', '!', ',').
 4. Timestamps: Do NOT output any timestamps or time codes.
 5. Output format: Output ONLY a valid JSON object with key "sentences" containing an array of strings.
 Example:
 {
   "sentences": [
-    "While energy is fresh, it tells me to film everything first and then move on to phase two.",
+    "While energy is fresh,",
+    "it tells me to film everything first and then move on to phase two.",
     "And that gives me momentum."
   ]
 }`;
@@ -387,7 +388,124 @@ export function parseSegmentationResponse(raw: string): string[] {
     }
   }
 
-  return sentenceList.map(s => s.trim()).filter(s => s.length > 0);
+  const rawSentences = sentenceList.map(s => s.trim()).filter(s => s.length > 0);
+  const finalizedSentences: string[] = [];
+  for (const s of rawSentences) {
+    const subPieces = splitOverlongAiSentence(s, 12, 70);
+    finalizedSentences.push(...subPieces);
+  }
+
+  return finalizedSentences;
+}
+
+/**
+ * Split an overlong AI sentence into concise subtitle units (soft limit 8~12 words, hard limit 14 words / 70 chars)
+ * while keeping all words in exact order for acoustic alignment.
+ */
+export function splitOverlongAiSentence(sentence: string, maxWords = 12, maxChars = 70): string[] {
+  if (!sentence) return [];
+  const trimmed = sentence.trim();
+  let words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length <= 1 && trimmed.length > 25) {
+    const extracted = extractTokensFromText(trimmed);
+    if (extracted.length > 1) {
+      words = extracted;
+    }
+  }
+
+  if (words.length <= 14 && trimmed.length <= maxChars) {
+    return [trimmed];
+  }
+
+  const isAbbr = (w: string) => /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e)\.$/i.test(w.trim());
+  const hasTerm = (w: string) => /[.?!。？！]$/.test(w.trim()) && !isAbbr(w);
+  const hasClause = (w: string) => /[,;:—\-"'，；：]$/.test(w.trim());
+  const isConn = (w: string) =>
+    /^(and|but|or|so|because|which|that|when|where|if|while|like|with|for|to|in|on|about|as|then|after|before|since|until|although|though)$/i.test(
+      w.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '')
+    );
+
+  const pieces: string[] = [];
+  let cur: string[] = [];
+
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    const remaining = words.length - (i + 1);
+
+    // Lookahead: if adding this word would violate hard limits (14 words or maxChars),
+    // flush the current accumulated piece first so it stays strictly within bounds.
+    if (cur.length > 0 && (cur.length >= 14 || cur.join(' ').length + 1 + w.length > maxChars)) {
+      pieces.push(cur.join(' '));
+      cur = [];
+    }
+
+    cur.push(w);
+    const count = cur.length;
+    const curLen = cur.join(' ').length;
+
+    if (hasTerm(w)) {
+      pieces.push(cur.join(' '));
+      cur = [];
+      continue;
+    }
+
+    if (hasClause(w) && count >= 4 && remaining >= 3) {
+      pieces.push(cur.join(' '));
+      cur = [];
+      continue;
+    }
+
+    if (count >= 5 && count <= maxWords && remaining >= 3) {
+      const nextWord = words[i + 1];
+      if (nextWord && isConn(nextWord)) {
+        pieces.push(cur.join(' '));
+        cur = [];
+        continue;
+      }
+    }
+
+    if (count >= maxWords && remaining >= 3) {
+      pieces.push(cur.join(' '));
+      cur = [];
+    } else if (count >= 14 || curLen >= maxChars) {
+      pieces.push(cur.join(' '));
+      cur = [];
+    }
+  }
+
+  if (cur.length > 0) {
+    const prevPiece = pieces[pieces.length - 1];
+    const prevEndsWithTerm = prevPiece && hasTerm(prevPiece);
+    const prevCount = prevPiece ? prevPiece.split(/\s+/).filter(Boolean).length : 0;
+    const prevLen = prevPiece ? prevPiece.length : 0;
+    const curLen = cur.join(' ').length;
+
+    if (
+      pieces.length > 0 &&
+      !prevEndsWithTerm &&
+      cur.length <= 2 &&
+      prevCount + cur.length <= 14 &&
+      prevLen + curLen + 1 <= maxChars
+    ) {
+      pieces[pieces.length - 1] = pieces[pieces.length - 1] + ' ' + cur.join(' ');
+    } else {
+      pieces.push(cur.join(' '));
+    }
+  }
+
+  // Safe slicing pass: ensure absolutely NO piece in pieces exceeds maxChars
+  const safePieces: string[] = [];
+  for (const p of pieces) {
+    if (p.length <= maxChars) {
+      safePieces.push(p);
+    } else {
+      for (let i = 0; i < p.length; i += maxChars) {
+        safePieces.push(p.slice(i, i + maxChars));
+      }
+    }
+  }
+
+  return safePieces.filter(Boolean);
 }
 
 /**

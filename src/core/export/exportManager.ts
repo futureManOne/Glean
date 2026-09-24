@@ -254,7 +254,7 @@ export function generateTranscriptWordHtml(cues: SubtitleCue[], options: Transcr
 <body>
   <div class="header-border">
     <h1>${displayTitle}</h1>
-    <p class="meta">VocabFrame 导出 &bull; 共 ${cues.length} 句台词 &bull; 导出日期: ${nowStr}</p>
+    <p class="meta">Glean 导出 &bull; 共 ${cues.length} 句台词 &bull; 导出日期: ${nowStr}</p>
   </div>
   <div>
     ${itemsHtml}
@@ -451,7 +451,7 @@ export function exportTranscriptPdf(cues: SubtitleCue[], options: TranscriptExpo
 <body>
   <div class="print-bar no-print">
     <div class="print-bar-title">
-      <span>📄 VocabFrame 高保真剧本导出</span>
+      <span>📄 Glean 高保真剧本导出</span>
       <span class="print-tip">提示：在打印对话框的目标设备中选择【另存为 PDF】即可保存精美排版文档</span>
     </div>
     <div class="print-actions">
@@ -467,7 +467,7 @@ export function exportTranscriptPdf(cues: SubtitleCue[], options: TranscriptExpo
   <div class="container">
     <div class="header">
       <h1 class="title">${displayTitle}</h1>
-      <p class="meta">VocabFrame 双语学习剧本 &bull; 共 ${cues.length} 句台词 &bull; 导出时间: ${nowStr}</p>
+      <p class="meta">Glean 双语学习剧本 &bull; 共 ${cues.length} 句台词 &bull; 导出时间: ${nowStr}</p>
     </div>
 
     <div>
@@ -510,7 +510,7 @@ function getFilteredWords(words: SavedWord[], filterLevel?: string): SavedWord[]
  */
 export function generateVocabularyTxt(words: SavedWord[], options: VocabularyExportOptions = {}): string {
   const filtered = getFilteredWords(words, options.filterLevel);
-  const title = options.title ? `${options.title}\n${'='.repeat(options.title.length)}\n\n` : 'VocabFrame 生词本\n================\n\n';
+  const title = options.title ? `${options.title}\n${'='.repeat(options.title.length)}\n\n` : 'Glean 生词本\n================\n\n';
   const lines = filtered.map(w => {
     const cefr = w.cefr ? ` [${w.cefr}]` : '';
     const phonetic = w.phonetic ? ` /${w.phonetic}/` : '';
@@ -554,7 +554,7 @@ export function generateVocabularyCsv(words: SavedWord[], options: VocabularyExp
 export function generateVocabularyJson(words: SavedWord[], options: VocabularyExportOptions = {}): string {
   const filtered = getFilteredWords(words, options.filterLevel);
   const data = {
-    title: options.title || 'VocabFrame Saved Vocabulary',
+    title: options.title || 'Glean Saved Vocabulary',
     exportTime: new Date().toISOString(),
     totalWords: filtered.length,
     words: filtered
@@ -584,7 +584,7 @@ export function generateVocabularyAnki(words: SavedWord[], options: VocabularyEx
  */
 export function generateVocabularyWordHtml(words: SavedWord[], options: VocabularyExportOptions = {}): string {
   const filtered = getFilteredWords(words, options.filterLevel);
-  const rawTitle = options.title || 'VocabFrame 生词本词汇卡';
+  const rawTitle = options.title || 'Glean 生词本词汇卡';
   const displayTitle = escapeHtml(rawTitle);
   const nowStr = new Date().toLocaleDateString();
 
@@ -644,7 +644,7 @@ export function generateVocabularyWordHtml(words: SavedWord[], options: Vocabula
  */
 export function exportVocabularyPdf(words: SavedWord[], options: VocabularyExportOptions = {}): void {
   const filtered = getFilteredWords(words, options.filterLevel);
-  const rawTitle = options.title || 'VocabFrame 生词本词汇卡';
+  const rawTitle = options.title || 'Glean 生词本词汇卡';
   const displayTitle = escapeHtml(rawTitle);
   const nowStr = new Date().toLocaleDateString();
 
@@ -774,7 +774,7 @@ export function exportVocabularyPdf(words: SavedWord[], options: VocabularyExpor
 <body>
   <div class="print-bar no-print">
     <div>
-      <span style="font-size: 14px; font-weight: 600;">📚 VocabFrame 生词本导出</span>
+      <span style="font-size: 14px; font-weight: 600;">📚 Glean 生词本导出</span>
       <span style="font-size: 12px; color: #94a3b8; margin-left: 12px;">在打印对话框中选择【另存为 PDF】</span>
     </div>
     <div>
@@ -817,7 +817,7 @@ export function exportTranscript(
   format: ExportFormat,
   options: TranscriptExportOptions = {}
 ): void {
-  const rawTitle = options.title || 'VocabFrame_Transcript';
+  const rawTitle = options.title || 'Glean_Transcript';
   const cleanTitle = sanitizeFilename(rawTitle);
 
   switch (format) {
@@ -866,7 +866,7 @@ export function exportVocabulary(
   format: ExportFormat,
   options: VocabularyExportOptions = {}
 ): void {
-  const rawTitle = options.title || 'VocabFrame_Vocabulary';
+  const rawTitle = options.title || 'Glean_Vocabulary';
   const cleanTitle = sanitizeFilename(rawTitle);
 
   switch (format) {

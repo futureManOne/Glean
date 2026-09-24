@@ -20,7 +20,7 @@ function initYouTubeMainWorld() {
   }
   (window as any).__LR_YT_SNIFFER_INJECTED__ = true;
 
-  console.log('[VocabFrame] YouTube Main World content script initialized.');
+  console.log('[Glean] YouTube Main World content script initialized.');
 
     let lastDispatchedUrl = '';
     let lastDispatchedVideoId = '';
@@ -494,7 +494,7 @@ function initBilibiliMainWorld() {
   }
   (window as any).__LR_BILI_SNIFFER_INJECTED__ = true;
 
-  console.log('[VocabFrame] Bilibili Main World content script initialized.');
+  console.log('[Glean] Bilibili Main World content script initialized.');
 
   let lastDispatchedCid = '';
   let lastDispatchedUrl = '';
