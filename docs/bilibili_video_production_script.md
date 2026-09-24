@@ -108,7 +108,7 @@
 支持 4 层字幕嗅探、毫秒级 AI 播放感知精翻、逐词可点 CEFR 难度词卡、ESL 深度例句与一键导出 Anki 牌组。
 
 🔗 项目开源地址：https://github.com/futureManOne/Glean
-📖 完整图文使用说明书（博客直达）：https://fm.defiy.top/archives/glean-user-guide
+📖 完整图文使用说明书：https://futuremanone.github.io/Glean/
 
 欢迎大家在 GitHub 点个 ⭐ Star 支持开源创作！
 有任何想支持的网站或功能，欢迎在评论区或 GitHub Issues 中留言交流～
@@ -119,7 +119,7 @@
 🎉 小伙伴们好！视频中演示的【Glean 拾句】双语学习扩展全套资料指引如下：
 
 1️⃣ 开源仓库下载：https://github.com/futureManOne/Glean （欢迎顺手点个 Star ⭐）
-2️⃣ 3分钟图文安装说明书：https://fm.defiy.top/archives/glean-user-guide
+2️⃣ 3分钟图文安装说明书：https://futuremanone.github.io/Glean/guide/installation
 3️⃣ 常见问题：
    - 夸克网盘怎么用？打开 pan.quark.cn 播放视频即可自动生效；
    - 需不需要花钱买模型？内置 42,978 条离线词库，无需 Key 即可免费查词与双语对照；开启 AI 精翻推荐使用 Gemini (免费额度大) 或 DeepSeek。
