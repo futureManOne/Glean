@@ -15,7 +15,10 @@
     "test": "bun test tests/",
     "test:unit": "bun test tests/",
     "test:e2e": "npx playwright test",
-    "postinstall": "node ./node_modules/wxt/bin/wxt.mjs prepare"
+    "postinstall": "node ./node_modules/wxt/bin/wxt.mjs prepare",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -38,6 +41,7 @@
     "postcss": "^8.5.2",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
+    "vitepress": "^1.6.4",
     "wxt": "^0.19.28"
   }
 }

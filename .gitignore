@@ -9,6 +9,8 @@ node_modules/
 dist
 dist/
 *.zip
+docs/.vitepress/dist
+docs/.vitepress/cache
 
 # Environment variables & secrets
 .env
