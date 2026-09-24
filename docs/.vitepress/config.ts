@@ -14,7 +14,6 @@ export default defineConfig({
       { text: '使用指南', link: '/guide/' },
       { text: '平台适配', link: '/guide/platforms' },
       { text: '快捷键', link: '/guide/shortcuts' },
-      { text: 'Halo 博客', link: 'https://fm.defiy.top' },
       { text: 'GitHub', link: 'https://github.com/futureManOne/Glean' }
     ],
     sidebar: {

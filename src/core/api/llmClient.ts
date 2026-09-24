@@ -52,10 +52,9 @@ export function normalizeBaseUrl(url: string): string {
 
   // 4. Upgrade http to https for known secure AI gateways
   if (
-    trimmed.includes('sub2api.defly.top') ||
-    trimmed.includes('sub2api.defiy.top') ||
-    trimmed.includes('grok2api.defly.top') ||
-    trimmed.includes('grok2api.defiy.top') ||
+    trimmed.includes('api.openai.com') ||
+    trimmed.includes('api.deepseek.com') ||
+    trimmed.includes('api.x.ai') ||
     trimmed.includes('generativelanguage.googleapis.com')
   ) {
     trimmed = trimmed.replace(/^http:\/\//i, 'https://');
@@ -90,14 +89,8 @@ export function normalizeBaseUrl(url: string): string {
   // 7. Ensure /v1 for standard gateways if omitted
   if (
     (trimmed.includes('api.openai.com') ||
-      trimmed.includes('sub2api.defiy.top') ||
-      trimmed.includes('sub2api.defly.top') ||
-      trimmed.includes('sub2api') ||
-      trimmed.includes('grok2api.defiy.top') ||
-      trimmed.includes('grok2api.defly.top') ||
-      trimmed.includes('defly.top') ||
-      trimmed.includes('defiy.top') ||
-      trimmed.includes('api.deepseek.com')) &&
+      trimmed.includes('api.deepseek.com') ||
+      trimmed.includes('api.x.ai')) &&
     !/\/(v1|v1beta|v2|v3)$/i.test(trimmed)
   ) {
     trimmed = `${trimmed}/v1`;

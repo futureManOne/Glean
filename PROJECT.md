@@ -16,13 +16,13 @@
   - `src/ui/components/SentenceAnalysisCard.tsx`: Shadow DOM encapsulated glassmorphism card/drawer displaying multi-dimensional sentence breakdown.
   - `src/ui/components/AppOverlay.tsx`: Mounting point inside `<language-reactor-overlay>` shadowRoot.
 - **UI & Settings Presets (R1)**:
-  - `src/entrypoints/popup/App.tsx`: Provider preset selector with Grok2API dedicated preset (`https://grok2api.defiy.top/v1`, default `grok-4.6`), key prefill, instant connection test button with latency feedback, and persistent save.
-  - `src/ui/components/QuarkControlBar.tsx`: In-page settings modal with Grok2API preset and connection test.
+  - `src/entrypoints/popup/App.tsx`: Provider preset selector with dedicated presets (Google Gemini, DeepSeek, OpenAI, Grok, Custom Gateway), instant connection test button with latency feedback, and persistent save.
+  - `src/ui/components/QuarkControlBar.tsx`: In-page settings modal with provider presets and connection test.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | Grok2API Settings Presets & Key Prefill | Endpoint `https://grok2api.defiy.top/v1`, model `grok-4.6`, default key prefill | M1 | ORIGINAL_REQUEST §1 |
+| 1 | AI Provider Presets | Endpoints for Gemini, DeepSeek, OpenAI, Grok & Custom Gateway with instant test | M1 | ORIGINAL_REQUEST §1 |
 | 2 | Instant Connection Test | Test Bearer auth via `/v1/models` and `/v1/chat/completions` with latency reporting | M1 | ORIGINAL_REQUEST §1 |
 | 3 | MV3 Background CORS Proxy | Route LLM fetch through background service worker to prevent content-script CORS blocks | M1 | Survey 1 Investigation |
 | 4 | Chrome Storage Local Persistence & Sync | Persist settings to `chrome.storage.local` and sync across popup & content scripts | M1 | Survey 1 Investigation |

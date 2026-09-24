@@ -117,20 +117,20 @@ export interface AiPreset {
 
 export const AI_PRESETS: Record<AiProvider, AiPreset> = {
   sub2api: {
-    name: 'Sub2API (自定义网关)',
+    name: '第三方网关 (Custom Gateway)',
     provider: 'sub2api',
-    apiBaseUrl: 'https://sub2api.defiy.top/v1',
+    apiBaseUrl: 'https://api.your-gateway.com/v1',
     modelName: 'gpt-4o',
     defaultKeyHint: 'sk-...',
-    description: '第三方 OpenAI 兼容网关，请仅使用你信任的服务和自己的 API Key'
+    description: '第三方 OpenAI 兼容网关，请填入您信任的网关地址与 API Key'
   },
   grok: {
-    name: 'Grok2API',
+    name: 'xAI Grok',
     provider: 'grok',
-    apiBaseUrl: 'https://grok2api.defiy.top/v1',
-    modelName: 'grok-4.6',
-    defaultKeyHint: 'g2a_...',
-    description: '第三方 OpenAI 兼容网关，请仅使用你信任的服务和自己的 API Key'
+    apiBaseUrl: 'https://api.x.ai/v1',
+    modelName: 'grok-2-latest',
+    defaultKeyHint: 'xai-...',
+    description: 'xAI 官方 Grok 模型接口或兼容中转网关'
   },
   deepseek: {
     name: 'DeepSeek',

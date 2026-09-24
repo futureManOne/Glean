@@ -257,11 +257,10 @@ bun run build      # 构建 Chrome Manifest V3 生产包
 | 预设 | 接口地址 | 默认模型 |
 | :--- | :--- | :--- |
 | Google Gemini（默认） | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` |
-| Grok2API | `https://grok2api.defiy.top/v1` | `grok-4.6` |
-| Sub2API | `https://sub2api.defiy.top/v1` | `gpt-4o` |
 | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
-| 自定义 | 任意 OpenAI 兼容地址 | 任意模型名 |
+| xAI Grok | `https://api.x.ai/v1` | `grok-2-latest` |
+| 自定义网关 | 任意 OpenAI 兼容地址（如第三方中转） | 任意模型名 |
 
 3. 填入自己的 `API Key`，点击 **保存并测试连接** —— 插件会拉取模型列表并显示响应延迟；
 4. 使用自定义网关时，首次会弹出该域名的访问授权（`chrome.permissions`），授权后请求经 background service worker 转发，规避跨域限制。

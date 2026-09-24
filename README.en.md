@@ -257,11 +257,10 @@ The offline dictionary works with **zero configuration**. To unlock the AI featu
 | Preset | Endpoint | Default model |
 | :--- | :--- | :--- |
 | Google Gemini (default) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` |
-| Grok2API | `https://grok2api.defiy.top/v1` | `grok-4.6` |
-| Sub2API | `https://sub2api.defiy.top/v1` | `gpt-4o` |
 | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
-| Custom | any OpenAI-compatible endpoint | any model name |
+| xAI Grok | `https://api.x.ai/v1` | `grok-2-latest` |
+| Custom Gateway | any OpenAI-compatible endpoint | any model name |
 
 3. Enter your own `API Key` and click **Save & Test Connection** — Glean fetches the model list and reports the response latency.
 4. With a custom gateway, Chrome asks you to authorize that origin once (`chrome.permissions`); requests are then forwarded through the background service worker to avoid CORS restrictions.

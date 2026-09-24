@@ -257,11 +257,10 @@ bun run build      # Chrome Manifest V3 のプロダクションビルド
 | プリセット | エンドポイント | 既定モデル |
 | :--- | :--- | :--- |
 | Google Gemini（既定） | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` |
-| Grok2API | `https://grok2api.defiy.top/v1` | `grok-4.6` |
-| Sub2API | `https://sub2api.defiy.top/v1` | `gpt-4o` |
 | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
-| カスタム | 任意の OpenAI 互換 URL | 任意のモデル名 |
+| xAI Grok | `https://api.x.ai/v1` | `grok-2-latest` |
+| カスタムゲートウェイ | 任意の OpenAI 互换 URL | 任意のモデル名 |
 
 3. 自分の `API Key` を入力し、**保存して接続テスト** をクリックします。モデル一覧の取得とレスポンス遅延が表示されます。
 4. カスタムゲートウェイを使う場合、初回のみそのドメインの許可を求められます（`chrome.permissions`）。許可後は background service worker 経由で転送され、CORS の制限を回避できます。
