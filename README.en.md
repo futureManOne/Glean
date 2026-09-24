@@ -216,7 +216,7 @@ graph TD
 ### 1. Clone and build
 
 ```bash
-git clone https://github.com/JustNowJustLike/Glean.git
+git clone https://github.com/futureManOne/Glean.git
 cd Glean
 
 bun install        # install dependencies

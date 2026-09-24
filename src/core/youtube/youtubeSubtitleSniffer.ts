@@ -1316,6 +1316,7 @@ export class YouTubeSubtitleSniffer {
       const currentCues = useAppStore.getState().cues;
       const isSameVideo = this.cachedMainVideoId === curVid && (!storeVid || storeVid === curVid);
       const isIncomingSubstantiallyBigger = this.shouldAcceptNewCues(sanitized, currentCues);
+      const hasAiRefinedCues = isSameVideo && currentCues.length > 0 && currentCues.some(c => c.isAiRefined || c.isMixedRefined || c.mixedPhrases !== undefined || c.tokens?.some(t => t.isKeyPhrase));
       if (hasAiRefinedCues && !isIncomingSubstantiallyBigger) {
         console.log('[VocabFrame] Preserving existing AI-refined subtitles, preventing overwrite by raw textTrack.');
         return;

@@ -84,7 +84,7 @@ export interface WordExplanation {
   cefr?: CEFRLevel;
   collins?: number;
   audioUrl?: string;
-  source?: 'grok-ai' | 'google' | 'offline-rich' | 'ecdict-mini';
+  source?: 'grok-ai' | 'google' | 'offline-rich' | 'ecdict-mini' | 'ai';
   aiModel?: string;
   isFallback?: boolean;
   fallbackReason?: string;
