@@ -76,7 +76,19 @@ export const zhCN = {
     mixedModeShowTranslationDesc: '在混合行下方额外显示整句中文译文；关闭后仅保留英文原句与行内重点释义，画面更清爽沉浸。',
     maskModeLabel: '听力磨砂遮罩模式 (脱离字幕磨耳朵)',
     maskModeDesc: '翻译字幕默认虚化模糊，鼠标悬停时清晰显示',
-    subtitleOpacity: '字幕卡片背景不透明度:'
+    subtitleOpacity: '字幕卡片背景不透明度:',
+    audioSectionTitle: '🔊 单词发音与朗读语音设置',
+    audioSectionDesc: '推荐优先使用有道真人原声，母语录音纯正清晰；如选用系统语音，已自动为您屏蔽 Mac 旧版低质声音（如沙哑的 Alex）。',
+    ttsEngine: '发音引擎与来源:',
+    ttsEngineYoudaoUS: '有道词典真人原声 (美音) [推荐]',
+    ttsEngineYoudaoUK: '有道词典真人原声 (英音)',
+    ttsEngineGoogle: 'Google 词典 TTS (国际标准音)',
+    ttsEngineSystem: '系统 / 浏览器原生语音 (Web Speech API)',
+    ttsVoice: '系统发音人:',
+    ttsVoiceAuto: '自动优选高质量声音 (Samantha / Ava / Google 等)',
+    ttsRate: '发音语速:',
+    testAudio: '试听发音',
+    testingAudio: '正在播放...'
   },
 
   // Subtitle Overlay

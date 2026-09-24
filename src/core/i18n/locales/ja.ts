@@ -78,7 +78,19 @@ export const ja: TranslationSchema = {
     mixedModeShowTranslationDesc: 'ハイブリッド字幕の下に全文翻訳を表示します。オフにすると原文と語句注釈のみが表示され、すっきりと学習に集中できます。',
     maskModeLabel: 'リスニングブラインドマスク (字幕に頼らず耳を鍛える)',
     maskModeDesc: '翻訳字幕をデフォルトでぼかし、マウスオーバーでクリアに表示',
-    subtitleOpacity: '字幕背景の不透明度:'
+    subtitleOpacity: '字幕背景の不透明度:',
+    audioSectionTitle: '🔊 単語発音・音声設定',
+    audioSectionDesc: 'スタジオ録音の有道リアルネイティブ音声を推奨します。システム音声を使用する場合、かすれたレガシー音声（Alex等）は自動で除外されます。',
+    ttsEngine: '発音エンジン・音源:',
+    ttsEngineYoudaoUS: '有道リアル音声 (アメリカ英語) [推奨]',
+    ttsEngineYoudaoUK: '有道リアル音声 (イギリス英語)',
+    ttsEngineGoogle: 'Google TTS (国際標準)',
+    ttsEngineSystem: 'システム標準音声 (Web Speech API)',
+    ttsVoice: 'システム発音者:',
+    ttsVoiceAuto: '自動 (高品質推奨: Samantha / Ava / Google)',
+    ttsRate: '発音速度:',
+    testAudio: '発音をテスト',
+    testingAudio: '再生中...'
   },
 
   // Subtitle Overlay

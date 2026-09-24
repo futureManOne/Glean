@@ -160,6 +160,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoPauseAfterSentence: false,
   highlightVocabulary: true,
   subtitleTimeOffset: 0,
+  ttsEngine: 'youdao-us',
+  ttsVoice: '',
+  ttsRate: 1.0,
   repeatCount: 1,
   playbackSpeed: 1.0,
   hotkeys: {

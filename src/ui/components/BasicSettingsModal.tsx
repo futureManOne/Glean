@@ -4,6 +4,7 @@ import { getLocale } from '@/core/i18n';
 import { useAppStore } from '@/store/useAppStore';
 import { SubtitleMode, SupportedLang, SUPPORTED_TRANSLATION_LANGUAGES, MixedGlossDensity } from '@/types';
 import { AiSettingsPanel } from './AiSettingsPanel';
+import { AudioSettingsSection } from './AudioSettingsSection';
 
 interface BasicSettingsModalProps {
   open: boolean;
@@ -86,6 +87,7 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
         <div className="space-y-6 p-6">
           {children}
           <AiSettingsPanel />
+          <AudioSettingsSection />
           <div>
             <label className="mb-2 block text-[11px] font-medium text-gray-400">{t.uiLanguage}</label>
             <div className="grid grid-cols-3 gap-2">

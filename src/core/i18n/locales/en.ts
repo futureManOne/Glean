@@ -78,7 +78,19 @@ export const en: TranslationSchema = {
     mixedModeShowTranslationDesc: 'Show the full translated sentence underneath the mixed original line. Turn off for a cleaner, immersive gloss experience.',
     maskModeLabel: 'Listening Frosted Mask (Train Your Ears)',
     maskModeDesc: 'Translation subtitles are blurred by default and reveal clearly on hover',
-    subtitleOpacity: 'Subtitle Background Opacity:'
+    subtitleOpacity: 'Subtitle Background Opacity:',
+    audioSectionTitle: '🔊 Pronunciation & Speech Settings',
+    audioSectionDesc: 'Recommended: Youdao Human Voice for studio-recorded native pronunciation. If using system speech, low-quality legacy voices (like raspy Alex) are filtered automatically.',
+    ttsEngine: 'Pronunciation Source:',
+    ttsEngineYoudaoUS: 'Youdao Human Voice (US American) [Recommended]',
+    ttsEngineYoudaoUK: 'Youdao Human Voice (UK British)',
+    ttsEngineGoogle: 'Google TTS (International Standard)',
+    ttsEngineSystem: 'System Native Voice (Web Speech API)',
+    ttsVoice: 'System Voice:',
+    ttsVoiceAuto: 'Auto (Best Quality: Samantha / Ava / Google)',
+    ttsRate: 'Speech Rate:',
+    testAudio: 'Test Audio',
+    testingAudio: 'Playing...'
   },
 
   // Subtitle Overlay

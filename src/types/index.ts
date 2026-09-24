@@ -197,6 +197,7 @@ export interface LlmChatParams {
 export type SubtitleMode = 'both' | 'mixed' | 'target' | 'translation' | 'hidden';
 export type SupportedLang = 'zh-CN' | 'en' | 'ja';
 export type MixedGlossDensity = 'low' | 'medium' | 'high';
+export type TtsAudioSource = 'youdao-us' | 'youdao-uk' | 'google' | 'system';
 
 export interface TranslationLanguageOption {
   code: string;
@@ -246,6 +247,11 @@ export interface AppSettings {
   autoPauseAfterSentence: boolean; // Shadowing training
   highlightVocabulary: boolean;
   subtitleTimeOffset: number;       // In seconds (e.g. +0.5, -0.5)
+
+  // Audio & Word Pronunciation Settings
+  ttsEngine?: TtsAudioSource;       // 'youdao-us' (默认) | 'youdao-uk' | 'google' | 'system'
+  ttsVoice?: string;                // 系统语音发音人名称 (空字符串为自动优选)
+  ttsRate?: number;                 // 发音语速 0.7 ~ 1.3 (默认 1.0)
   
   // Playback & Shortcuts
   repeatCount: number;
