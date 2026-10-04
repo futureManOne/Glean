@@ -228,6 +228,11 @@ const SURROUNDED_COLLOCATION_MAP: Record<string, { prev: string; next: string; f
   'rid': { prev: 'get', next: 'of', full: 'get rid of' }
 };
 
+export const SEPARABLE_PARTICLES: Record<string, true> = {
+  out: true, up: true, off: true, in: true, on: true, down: true, away: true, back: true, over: true, apart: true,
+  through: true, around: true, along: true, by: true, about: true, aside: true, ahead: true, together: true, into: true
+};
+
 const TERMINAL_PUNCTUATION_REGEX = /[.?!;:,—\n\r"“”]/;
 
 /**
@@ -385,22 +390,22 @@ export function applyPhraseAnnotationsToTokens(
       continue;
     }
 
-    // Split phrase into cleaned words (support spaces, hyphens, dashes, and apostrophes)
+    // Split phrase into cleaned words (support spaces, hyphens, dashes, ellipses, and apostrophes)
     const pWords = phraseStr
       .toLowerCase()
       .replace(/[’‘ʼʻ`]/g, "'")
+      .replace(/\.{2,}/g, ' ')
       .split(/[\s\-–—]+/)
       .map(w => w.replace(/^[^\w']+|[^\w']+$/g, '').replace(/^'+|'+$/g, '').trim())
       .filter(Boolean);
-
     if (pWords.length === 0) continue;
 
     // Slide across wordIndices and annotate ALL non-overlapping occurrences in the sentence
+    let didMatchAny = false;
     let searchStart = 0;
     while (searchStart <= wordIndices.length - pWords.length) {
       let matchedStartWordPos = -1;
       let matchedWordCount = pWords.length;
-
       for (let w = searchStart; w <= wordIndices.length - pWords.length; w++) {
         // Avoid overlapping with already matched phrases
         let hasOverlap = false;
@@ -522,19 +527,138 @@ export function applyPhraseAnnotationsToTokens(
         };
       }
 
+      didMatchAny = true;
       // Advance search cursor beyond matched span
       searchStart = matchedStartWordPos + matchedWordCount;
     }
+
+    // 4. Separable phrasal matching (when contiguous match failed)
+    // Handles separable phrasal verbs where an object or pronoun is inserted (e.g. "find everything out", "turn it off", "figure this out")
+    if (!didMatchAny && pWords.length === 2) {
+      const verbTarget = pWords[0];
+      const particleTarget = pWords[1];
+
+      if (Boolean(SEPARABLE_PARTICLES[particleTarget]) || TRIVIAL_STOP_WORDS.has(particleTarget)) {
+        for (let w1 = 0; w1 < wordIndices.length - 1; w1++) {
+          const t1 = result[wordIndices[w1]];
+          if (t1.isKeyPhrase) continue;
+          if (!matchWord(t1.text, t1.lemma || '', verbTarget)) continue;
+
+          // Look ahead 1 to 4 intervening word tokens for the particle
+          for (let w2 = w1 + 1; w2 <= Math.min(w1 + 5, wordIndices.length - 1); w2++) {
+            const t2 = result[wordIndices[w2]];
+            if (t2.isKeyPhrase) continue;
+            // Words within the phrase must not span across sentence/clause delimiters
+            if (hasDelimiterBetween(result, wordIndices[w1], wordIndices[w2])) break;
+
+            if (matchWord(t2.text, t2.lemma || '', particleTarget)) {
+              phraseCounter++;
+              const phraseId = `p-${phraseCounter}-${Math.random().toString(36).slice(2, 7)}`;
+              const startIdx = wordIndices[w1];
+              const endIdx = wordIndices[w2];
+              const currentPhraseText = `${t1.text} ... ${t2.text}`;
+
+              result[startIdx] = {
+                ...result[startIdx],
+                phraseId,
+                phraseText: currentPhraseText,
+                isKeyPhrase: true,
+                isPhraseStart: true,
+                isPhraseEnd: false
+              };
+
+              result[endIdx] = {
+                ...result[endIdx],
+                phraseId,
+                phraseText: currentPhraseText,
+                phraseMeaning: meaningStr,
+                isKeyPhrase: true,
+                isPhraseStart: false,
+                isPhraseEnd: true,
+                contextMeaning: meaningStr
+              };
+
+              didMatchAny = true;
+              break;
+            }
+          }
+          if (didMatchAny) break;
+        }
+      }
+    } else if (!didMatchAny && pWords.length === 3) {
+      // Pattern: verb + [1-4 words object] + particle1 + particle2 (e.g. "take ... into account")
+      const verbTarget = pWords[0];
+      const part1Target = pWords[1];
+      const part2Target = pWords[2];
+
+      for (let w1 = 0; w1 < wordIndices.length - 2; w1++) {
+        const t1 = result[wordIndices[w1]];
+        if (t1.isKeyPhrase) continue;
+        if (!matchWord(t1.text, t1.lemma || '', verbTarget)) continue;
+
+        for (let w2 = w1 + 1; w2 <= Math.min(w1 + 5, wordIndices.length - 2); w2++) {
+          const t2 = result[wordIndices[w2]];
+          const t3 = result[wordIndices[w2 + 1]];
+          if (t2.isKeyPhrase || t3.isKeyPhrase) continue;
+          if (hasDelimiterBetween(result, wordIndices[w1], wordIndices[w2])) break;
+          if (hasDelimiterBetween(result, wordIndices[w2], wordIndices[w2 + 1])) continue;
+
+          if (matchWord(t2.text, t2.lemma || '', part1Target) && matchWord(t3.text, t3.lemma || '', part2Target)) {
+            phraseCounter++;
+            const phraseId = `p-${phraseCounter}-${Math.random().toString(36).slice(2, 7)}`;
+            const startIdx = wordIndices[w1];
+            const endIdx = wordIndices[w2 + 1];
+            const currentPhraseText = `${t1.text} ... ${t2.text} ${t3.text}`;
+
+            result[startIdx] = {
+              ...result[startIdx],
+              phraseId,
+              phraseText: currentPhraseText,
+              isKeyPhrase: true,
+              isPhraseStart: true,
+              isPhraseEnd: false
+            };
+
+            result[wordIndices[w2]] = {
+              ...result[wordIndices[w2]],
+              phraseId,
+              phraseText: currentPhraseText,
+              isKeyPhrase: true,
+              isPhraseStart: false,
+              isPhraseEnd: false
+            };
+
+            result[endIdx] = {
+              ...result[endIdx],
+              phraseId,
+              phraseText: currentPhraseText,
+              phraseMeaning: meaningStr,
+              isKeyPhrase: true,
+              isPhraseStart: false,
+              isPhraseEnd: true,
+              contextMeaning: meaningStr
+            };
+
+            didMatchAny = true;
+            break;
+          }
+        }
+        if (didMatchAny) break;
+      }
+    }
   }
 
-  // Thoroughly purge offline mechanical dictionary glosses from all non-phrase tokens
+  // When at least one key phrase was matched, purge offline mechanical dictionary glosses from non-phrase tokens
   // to prevent mixed old/new glosses (e.g. "tutorials(个别指导)")
-  for (let i = 0; i < result.length; i++) {
-    if (!result[i].isKeyPhrase && result[i].contextMeaning) {
-      result[i] = {
-        ...result[i],
-        contextMeaning: undefined
-      };
+  const hasMatchedPhrases = result.some(t => t.isKeyPhrase);
+  if (hasMatchedPhrases) {
+    for (let i = 0; i < result.length; i++) {
+      if (!result[i].isKeyPhrase && result[i].contextMeaning) {
+        result[i] = {
+          ...result[i],
+          contextMeaning: undefined
+        };
+      }
     }
   }
 
@@ -751,8 +875,7 @@ For each subtitle cue:
 1. "textZh": Provide a natural, fluent, and accurate full-sentence Chinese translation.
 2. "phrases": Identify key expressive units in the sentence. These include:
    - Fixed collocations, quantifier phrases & prepositional idioms (e.g. "a lot of", "in front of", "as well as", "a bit of", "lots of", "a couple of", "a number of", "out of", "instead of", "because of", "such as", "as long as", "as soon as")
-   - Phrasal verbs & idioms (e.g. "getting used to", "look forward to", "run out of", "give up")
-   - Meaningful collocations & chunks (e.g. "image generation", "make a profit", "take into account", "high-end")
+   - Phrasal verbs & idioms (e.g. "getting used to", "look forward to", "run out of", "give up", "find out", "turn off", "figure out")
    - Key content verbs, nouns, or adjectives that carry essential contextual meaning in this sentence (e.g. "ditched", "gig", "eventually", "notes", "different", "created")
 3. For each identified phrase:
    - "phrase": The exact continuous English phrase or word AS IT APPEARS in the sentence (e.g. "a lot of", "getting used to", "image generation", "ditched", "made a profit").
@@ -761,8 +884,8 @@ For each subtitle cue:
    - ANNOTATION DENSITY (${density.toUpperCase()}): ${densityRule}
    - CRITICAL: For fixed collocations and quantifier phrases composed with articles/prepositions (e.g. "a lot of", "in front of", "as well as", "a bit of"), ALWAYS extract the ENTIRE phrase including leading articles ('a', 'an') and trailing prepositions ('of', 'as', 'to') as a SINGLE semantic unit. NEVER split them (e.g. extract "a lot of", NEVER "a lot" or "lot"!).
    - DO NOT annotate trivial functional words or simple grammar connectors by themselves (e.g. DO NOT annotate 'to', 'it', 'and', 'my', 'is', 'the' in isolation).
-   - ALWAYS combine verbs with their prepositions/particles into full phrasal verbs when they form a single semantic unit (e.g. extract "getting used to" as a whole, NOT "getting" and "used" separately!).
-   - You MUST preserve the exact "id" integer for each item.
+   - ALWAYS combine verbs with their prepositions/particles into full phrasal verbs when they form a single semantic unit (e.g. extract "getting used to" as a whole, NOT "getting" and "used" separately!). For separable phrasal verbs with an object in between (such as "find everything out", "turn it off", "figure it out", "pick you up"), extract the base phrasal verb (e.g. "find out", "turn off", "figure out") or the full phrase ("find everything out").
+   - NEVER leave a substantive sentence completely unannotated with zero phrases unless it is purely conversational filler (like "Yeah", "Uh-huh"). Always annotate at least 1-2 core verbs, key phrases, or meaningful vocabulary chunks.
 5. Output strictly valid JSON matching this schema:
 {
   "results": [
@@ -882,16 +1005,19 @@ export class MixedGlossGenerator {
         ? applyPhraseAnnotationsToTokens(cue.tokens, cue.mixedPhrases)
         : cue.tokens;
 
-      const cleanedTokens = tokensToUse.map(t => {
-        if (!t.isKeyPhrase && t.contextMeaning) {
-          return { ...t, contextMeaning: undefined };
-        }
-        return t;
-      });
-      return {
-        ...cue,
-        tokens: cleanedTokens
-      };
+      const hasAnyPhrase = tokensToUse.some(t => t.isKeyPhrase);
+      if (hasAnyPhrase) {
+        const cleanedTokens = tokensToUse.map(t => {
+          if (!t.isKeyPhrase && t.contextMeaning) {
+            return { ...t, contextMeaning: undefined };
+          }
+          return t;
+        });
+        return {
+          ...cue,
+          tokens: cleanedTokens
+        };
+      }
     }
 
     const sentenceKey = this.normalizeSentenceKey(cue.textEn);
@@ -1123,8 +1249,19 @@ CRITICAL INSTRUCTIONS:
       if (!cue) continue;
 
       const tokens = cue.tokens || [];
-      const updatedTokens = applyPhraseAnnotationsToTokens(tokens, res.phrases);
-
+      let updatedTokens = applyPhraseAnnotationsToTokens(tokens, res.phrases);
+      if (!updatedTokens.some(t => t.isKeyPhrase)) {
+        updatedTokens = updatedTokens.map(token => {
+          if (!token.isWord) return token;
+          const clean = (token.lemma || token.text).toLowerCase().trim();
+          if (isTrivialStopWord(clean)) return token;
+          const fallback = fallbackLocalGloss(token);
+          if (fallback) {
+            return { ...token, contextMeaning: fallback };
+          }
+          return token;
+        });
+      }
       // Cache glosses for fast lookup
       const sentenceKey = this.normalizeSentenceKey(cue.textEn);
       const wordGlossMap = this.cache.get(sentenceKey) || new Map<string, string>();

@@ -43,3 +43,35 @@ export function isSupportedUrl(urlStr: string): boolean {
     return false;
   }
 }
+
+export type SupportedPlatformId = 'youtube' | 'bilibili' | 'quark';
+
+export function getPlatformFromHostname(hostname: string): SupportedPlatformId | null {
+  if (!hostname || typeof hostname !== 'string') return null;
+  const lower = hostname.toLowerCase().trim();
+
+  if (lower === 'youtube.com' || lower.endsWith('.youtube.com')) {
+    return 'youtube';
+  }
+  if (lower === 'bilibili.com' || lower.endsWith('.bilibili.com')) {
+    return 'bilibili';
+  }
+  if (lower === 'quark.cn' || lower.endsWith('.quark.cn')) {
+    return 'quark';
+  }
+
+  return null;
+}
+
+export function isPlatformEnabled(
+  hostname: string,
+  enabledPlatforms?: { youtube?: boolean; bilibili?: boolean; quark?: boolean }
+): boolean {
+  if (!isSupportedHostname(hostname)) return false;
+  const platform = getPlatformFromHostname(hostname);
+  if (!platform) {
+    return true;
+  }
+  if (!enabledPlatforms) return true;
+  return enabledPlatforms[platform] !== false;
+}

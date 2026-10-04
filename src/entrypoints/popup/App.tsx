@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Key, HardDrive, Download, Check, Loader2, Wifi, CheckCircle2, XCircle, Save, Sliders, Subtitles } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
-import { AI_PRESETS, AiProvider, ConnectionTestResult, SupportedLang, SubtitleMode } from '@/types';
+import { AI_PRESETS, AiProvider, ConnectionTestResult, SupportedLang, SubtitleMode, SupportedPlatformId } from '@/types';
 import { testAiConnection } from '@/core/api/llmClient';
 import { getLocale, formatString } from '@/core/i18n';
 import { SearchableModelSelect } from '@/ui/components/SearchableModelSelect';
@@ -14,6 +14,54 @@ const App: React.FC = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+
+  const togglePlatform = (platform: SupportedPlatformId) => {
+    const current = settings.enabledPlatforms ?? {
+      youtube: true,
+      bilibili: true,
+      quark: true
+    };
+    updateSettings({
+      enabledPlatforms: {
+        ...current,
+        [platform]: current[platform] === false ? true : false
+      }
+    });
+  };
+
+  const platforms: Array<{
+    id: SupportedPlatformId;
+    name: string;
+    domain: string;
+    badgeBorder: string;
+    badgeBg: string;
+    badgeText: string;
+  }> = [
+    {
+      id: 'quark',
+      name: t.popup.quarkPan.replace(/^✓\s*/, ''),
+      domain: 'pan.quark.cn',
+      badgeBorder: 'border-emerald-500/30',
+      badgeBg: 'bg-emerald-950/40',
+      badgeText: 'text-emerald-300'
+    },
+    {
+      id: 'youtube',
+      name: 'YouTube',
+      domain: 'youtube.com',
+      badgeBorder: 'border-blue-500/30',
+      badgeBg: 'bg-blue-950/40',
+      badgeText: 'text-blue-300'
+    },
+    {
+      id: 'bilibili',
+      name: t.popup.bilibili || '哔哩哔哩 (bilibili.com)',
+      domain: 'bilibili.com',
+      badgeBorder: 'border-pink-500/30',
+      badgeBg: 'bg-pink-950/40',
+      badgeText: 'text-pink-300'
+    }
+  ];
 
   const handleExport = () => {
     const data = exportSavedWordsAnki();
@@ -122,22 +170,57 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Target platform badges */}
-      <div className="bg-[#18181b] p-2.5 rounded-lg border border-[#2e2e38] space-y-1.5">
-        <div className="text-[11px] font-semibold text-gray-300 flex items-center space-x-1.5">
-          <HardDrive size={13} className="text-emerald-400" />
-          <span>{t.popup.supportedPlatforms}</span>
+      {/* Target platform switches */}
+      <div className="bg-[#18181b] p-3 rounded-lg border border-[#2e2e38] space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-semibold text-gray-300 flex items-center space-x-1.5">
+            <HardDrive size={13} className="text-emerald-400" />
+            <span>{t.popup.supportedPlatforms}</span>
+          </div>
+          <span className="text-[10px] text-gray-500">
+            {t.popup.platformSwitchDesc}
+          </span>
         </div>
-        <div className="flex flex-wrap gap-1.5 text-[10px]">
-          <span className="bg-[#242429] px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/30">
-            {t.popup.quarkPan}
-          </span>
-          <span className="bg-[#242429] px-2 py-0.5 rounded text-blue-300 border border-blue-500/30">
-            {t.popup.youtube}
-          </span>
-          <span className="bg-[#242429] px-2 py-0.5 rounded text-purple-300 border border-purple-500/30">
-            {t.popup.html5Video}
-          </span>
+        <div className="space-y-1.5">
+          {platforms.map((p) => {
+            const isEnabled = settings.enabledPlatforms?.[p.id] !== false;
+            return (
+              <div
+                key={p.id}
+                className="flex items-center justify-between bg-[#202026] px-2.5 py-1.5 rounded-md border border-[#2e2e3a] transition-colors hover:border-[#3a3a48]"
+              >
+                <div className="flex items-center space-x-2">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium border ${p.badgeBg} ${p.badgeBorder} ${p.badgeText}`}>
+                    {p.name}
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-mono">
+                    {p.domain}
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <span className={`text-[10px] font-medium transition-colors ${isEnabled ? 'text-emerald-400' : 'text-gray-500'}`}>
+                    {isEnabled ? t.popup.platformEnabled : t.popup.platformDisabled}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isEnabled}
+                    onClick={() => togglePlatform(p.id)}
+                    className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      isEnabled ? 'bg-emerald-500' : 'bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
+                        isEnabled ? 'translate-x-3' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

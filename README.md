@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/离线词典-42%2C978%20词条-orange.svg" alt="Offline dictionary">
   <img src="https://img.shields.io/badge/i18n-简体中文%20%7C%20English%20%7C%20日本語-purple.svg" alt="i18n">
   <a href="llms.txt"><img src="https://img.shields.io/badge/llms.txt-AI%20Friendly-blueviolet.svg" alt="llms.txt"></a>
+  <a href="https://linux.do"><img src="https://img.shields.io/badge/LINUX%20DO-Community-blue?logo=linux&logoColor=white" alt="LINUX DO"></a>
 </p>
 
 <p align="center">
@@ -396,6 +397,13 @@ interface SentenceDeepAnalysis {
 bun run compile   # 类型检查
 bun run build     # 构建冒烟验证
 ```
+
+---
+
+## 🙏 致谢
+
+- 感谢 [LINUX DO](https://linux.do/) 社区及其开源爱好者们的支持、反馈与技术交流。
+- 感谢 [skywind3000/ECDICT](https://github.com/skywind3000/ECDICT) 提供的优质开源英语离线词典与词形还原数据。
 
 ---
 

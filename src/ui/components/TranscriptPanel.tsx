@@ -809,9 +809,6 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
                     >
                       {cue.tokens && cue.tokens.length > 0 ? (() => {
                         const hasKeyPhrases = Boolean(
-                          cue.isAiRefined ||
-                          cue.isMixedRefined ||
-                          cue.mixedPhrases !== undefined ||
                           cue.tokens?.some(t => t.isKeyPhrase)
                         );
                         return cue.tokens.map((token) => {
@@ -854,9 +851,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
                       )}
                     </div>
 
-                    {/* Translation Line (hidden if identical to primary dialogue line, or hidden in mixed mode when showTranslationInMixedMode is off) */}
-                    {(!isMixedMode || Boolean(settings.showTranslationInMixedMode)) &&
-                      cue.textZh &&
+                    {/* Translation Line: Always show full bilingual translated sentence if available */}
+                    {cue.textZh &&
                       cue.textZh.trim() !== (cue.textEn || '').trim() && (
                       <div
                         className="text-gray-400 leading-normal"

@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/Offline%20Dictionary-42%2C978%20words-orange.svg" alt="Offline dictionary">
   <img src="https://img.shields.io/badge/i18n-简体中文%20%7C%20English%20%7C%20日本語-purple.svg" alt="i18n">
   <a href="llms.txt"><img src="https://img.shields.io/badge/llms.txt-AI%20Friendly-blueviolet.svg" alt="llms.txt"></a>
+  <a href="https://linux.do"><img src="https://img.shields.io/badge/LINUX%20DO-Community-blue?logo=linux&logoColor=white" alt="LINUX DO"></a>
 </p>
 
 <p align="center">
@@ -396,6 +397,13 @@ Issues and pull requests are very welcome. Please run these locally before submi
 bun run compile   # type check
 bun run build     # build smoke test
 ```
+
+---
+
+## 🙏 Acknowledgments
+
+- Special thanks to the [LINUX DO](https://linux.do/) community and open-source enthusiasts for their support, feedback, and technical discussions.
+- Thanks to [skywind3000/ECDICT](https://github.com/skywind3000/ECDICT) for providing the offline dictionary and lemma normalization data.
 
 ---
 

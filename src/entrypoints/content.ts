@@ -3,7 +3,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createShadowRootUi } from 'wxt/client';
 import { AppOverlay } from '@/ui/components/AppOverlay';
-import { getPlayerAdapter, isSupportedHostname } from '@/core/player';
+import { getPlayerAdapter, isSupportedHostname, isPlatformEnabled } from '@/core/player';
+import { useAppStore, STORAGE_KEY_SETTINGS } from '@/store/useAppStore';
 import tailwindCss from '@/ui/styles/tailwind.css?inline';
 
 export default defineContentScript({
@@ -48,12 +49,18 @@ export default defineContentScript({
     };
 
     const checkAndSyncPlayer = async () => {
-      // 1. Strict hostname whitelist guard (never display on unsupported pages)
-      if (!isSupportedHostname(window.location.hostname)) {
+      // 1. Strict hostname whitelist and user platform enablement guard
+      const currentHost = window.location.hostname;
+      if (!isSupportedHostname(currentHost)) {
         cleanupOverlay();
         return false;
       }
 
+      const { settings } = useAppStore.getState();
+      if (!isPlatformEnabled(currentHost, settings.enabledPlatforms)) {
+        cleanupOverlay();
+        return false;
+      }
       // 2. Adapter check
       const adapter = getPlayerAdapter();
       if (!adapter) {
@@ -153,6 +160,26 @@ export default defineContentScript({
           debouncedCheck();
         }
       }, 500);
+
+      // React immediately to platform toggle in popup
+      useAppStore.subscribe((state, prevState) => {
+        if (state.settings.enabledPlatforms !== prevState.settings.enabledPlatforms) {
+          debouncedCheck();
+        }
+      });
+
+      if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+          if (areaName === 'local' && changes[STORAGE_KEY_SETTINGS]?.newValue) {
+            const newSettings = changes[STORAGE_KEY_SETTINGS].newValue;
+            if (!isPlatformEnabled(window.location.hostname, newSettings.enabledPlatforms)) {
+              cleanupOverlay();
+            } else {
+              debouncedCheck();
+            }
+          }
+        });
+      }
 
       // Handle Fullscreen migration to prevent Top Layer from hiding overlay
       const handleFullscreenChange = () => {

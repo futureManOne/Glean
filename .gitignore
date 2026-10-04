@@ -20,6 +20,7 @@ docs/.vitepress/cache
 *.key
 
 # Tests & Coverage
+tests/
 test-results/
 playwright-report/
 blob-report/
@@ -43,4 +44,7 @@ ehthumbs.db
 # Internal AI task logs & scratch files
 ORIGINAL_REQUEST.md
 *.local
+bookmarks*.html
+omp-session*.html
+
 

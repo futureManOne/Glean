@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/オフライン辞書-42%2C978%20語-orange.svg" alt="Offline dictionary">
   <img src="https://img.shields.io/badge/i18n-简体中文%20%7C%20English%20%7C%20日本語-purple.svg" alt="i18n">
   <a href="llms.txt"><img src="https://img.shields.io/badge/llms.txt-AI%20Friendly-blueviolet.svg" alt="llms.txt"></a>
+  <a href="https://linux.do"><img src="https://img.shields.io/badge/LINUX%20DO-Community-blue?logo=linux&logoColor=white" alt="LINUX DO"></a>
 </p>
 
 <p align="center">
@@ -396,6 +397,13 @@ Issue と Pull Request を歓迎します。提出前に以下を実行してく
 bun run compile   # 型チェック
 bun run build     # ビルドのスモークテスト
 ```
+
+---
+
+## 🙏 謝辞
+
+- [LINUX DO](https://linux.do/) コミュニティおよびオープンソース愛好家の皆様のサポート、フィードバック、技術交流に深く感謝いたします。
+- オフライン辞書および語形変化データを提供してくださっている [skywind3000/ECDICT](https://github.com/skywind3000/ECDICT) に感謝いたします。
 
 ---
 

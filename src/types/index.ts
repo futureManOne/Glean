@@ -218,8 +218,17 @@ export const SUPPORTED_TRANSLATION_LANGUAGES: TranslationLanguageOption[] = [
   { code: 'ru', name: '俄语', englishName: 'Russian' },
 ];
 
+export type SupportedPlatformId = 'youtube' | 'bilibili' | 'quark';
+
+export interface EnabledPlatformsConfig {
+  youtube: boolean;
+  bilibili: boolean;
+  quark: boolean;
+}
+
 export interface AppSettings {
   pluginEnabled: boolean;
+  enabledPlatforms?: EnabledPlatformsConfig;
   // LLM AI Settings
   aiProvider: AiProvider;
   apiKey: string;

@@ -217,7 +217,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
   const containerStyle: React.CSSProperties = {
     position: 'fixed',
     left: `${visibleLeft}px`,
-    width: `${Math.max(420, Math.min(visibleWidth, window.innerWidth * 0.94))}px`,
+    width: `${visibleWidth}px`,
     bottom: finalBottom,
     zIndex: 99999
   };
@@ -314,14 +314,12 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
       )}
 
       {/* 2. Main Subtitle Area Container */}
-      <div style={containerStyle} className="flex flex-col items-center justify-center px-2 sm:px-4 pointer-events-none select-none">
-          
-          {/* 2.1 No subtitles loaded yet: clean video overlay, preserved in right sidebar */}
-          {(!cues || cues.length === 0) ? null : hasActiveCue ? (
-            /* 2.2 Active Subtitle Cue Box with Vertical Drag Handle */
-              <div className="relative group/sub flex flex-col items-center max-w-full pointer-events-none">
-              {/* Subtitle Card & AP Toggle Row (Language Reactor 1:1) */}
-              <div className="relative flex items-center justify-center space-x-3 w-auto max-w-full pointer-events-none">
+      {cues && cues.length > 0 && (
+        <div style={containerStyle} className="relative flex flex-col items-center justify-center pointer-events-none select-none min-h-[48px]">
+          {/* 2.1 Centered Subtitle Cue Box: Strictly horizontally centered */}
+          {hasActiveCue && (
+            <div className="relative group/sub flex flex-col items-center max-w-full px-20 sm:px-28 pointer-events-none">
+              <div className="relative flex items-center justify-center max-w-full pointer-events-none">
                 {/* Main Subtitle Content Capsule (Optimized for sleek single-line display matching LR) */}
                 {(() => {
                   const opacity = settings.subtitleOpacity ?? 0.85;
@@ -333,13 +331,12 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                     WebkitBackdropFilter: isTransparent ? 'none' : `blur(${Math.round(opacity * 8)}px)`,
                     boxShadow: isTransparent ? 'none' : `0 4px 20px rgba(0, 0, 0, ${opacity * 0.4})`,
                     width: 'fit-content',
-                    minWidth: 'min(calc(100% - 24px), 320px)',
-                    maxWidth: 'min(92vw, 1100px)'
+                    minWidth: `${Math.min(280, Math.max(160, visibleWidth - 260))}px`,
+                    maxWidth: `${Math.min(1100, Math.max(220, visibleWidth - 260))}px`
                   };
                   const activeCue = displayCue || currentCue;
                   const hasKeyPhrases = Boolean(
-                    activeCue?.tokens?.some(t => t.isKeyPhrase) ||
-                    (activeCue?.mixedPhrases && activeCue.mixedPhrases.length > 0)
+                    activeCue?.tokens?.some(t => t.isKeyPhrase)
                   );
                   const hasAnyInlineGlosses = Boolean(
                     activeCue?.tokens?.some(t =>
@@ -353,120 +350,126 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                       className="relative pointer-events-auto text-center lr-pill-bg px-6 sm:px-8 py-2.5 sm:py-3 rounded-2xl shadow-2xl transition-all duration-150"
                       style={capsuleStyle}
                     >
-                  {/* 1. English Sentence Line (Concise single line matching LR 1:1, or Mixed Mode) */}
-                  {(settings.showEnglish || isMixedMode) && activeCue && activeCue.textEn && (
-                    <div
-                      className={`font-bold tracking-wide text-center leading-normal lr-text-shadow text-white whitespace-normal break-words ${
-                        settings.maskEnglish
-                          ? 'filter blur-[5px] hover:blur-none transition-all duration-200 cursor-pointer select-none hover:select-text'
-                          : ''
-                      }`}
-                      style={{ fontSize: `${settings.subtitleFontSize}px` }}
-                      title={settings.maskEnglish ? '听力遮罩已开启，鼠标悬停显示英文' : undefined}
-                    >
-                      {activeCue.tokens && activeCue.tokens.length > 0 ? (
-                        activeCue.tokens.map((token) => {
-                          const isCjk = isCjkText(token.text);
-                          const tokenSpacing = isCjk
-                            ? (token.isKeyPhrase ? (token.isPhraseStart ? 'ml-0.5' : '') : 'mx-0 px-0')
-                            : 'inline-block mx-0.5 px-0.5';
+                      {/* 1. English Sentence Line (Concise single line matching LR 1:1, or Mixed Mode) */}
+                      {(settings.showEnglish || isMixedMode) && activeCue && activeCue.textEn && (
+                        <div
+                          className={`font-bold tracking-wide text-center leading-normal lr-text-shadow text-white whitespace-normal break-words ${
+                            settings.maskEnglish
+                              ? 'filter blur-[5px] hover:blur-none transition-all duration-200 cursor-pointer select-none hover:select-text'
+                              : ''
+                          }`}
+                          style={{ fontSize: `${settings.subtitleFontSize}px` }}
+                          title={settings.maskEnglish ? '听力遮罩已开启，鼠标悬停显示英文' : undefined}
+                        >
+                          {activeCue.tokens && activeCue.tokens.length > 0 ? (
+                            activeCue.tokens.map((token) => {
+                              const isCjk = isCjkText(token.text);
+                              const tokenSpacing = isCjk
+                                ? (token.isKeyPhrase ? (token.isPhraseStart ? 'ml-0.5' : '') : 'mx-0 px-0')
+                                : 'inline-block mx-0.5 px-0.5';
 
-                          return token.isWord ? (
-                            <span
-                              key={token.id}
-                              onClick={(e) => handleWordClick(e, token)}
-                              onMouseEnter={(e) => handleWordMouseEnter(e, token)}
-                              onMouseLeave={handleWordMouseLeave}
-                              className={`token-word ${token.isKeyPhrase ? 'inline-block' : (isCjk ? 'inline' : 'inline-block')} ${tokenSpacing} rounded transition-transform cursor-pointer hover:scale-105 active:scale-95 group/token ${getTokenColorClass(token)}`}
-                            >
-                              <span>{token.text}</span>
-                              {isMixedMode && (token.phraseMeaning && token.isPhraseEnd ? (
-                                <span className="ml-1 mr-0.5 text-[0.82em] font-medium text-emerald-300/90 group-hover/token:text-emerald-200 select-none">
-                                  ({token.phraseMeaning})
+                              return token.isWord ? (
+                                <span
+                                  key={token.id}
+                                  onClick={(e) => handleWordClick(e, token)}
+                                  onMouseEnter={(e) => handleWordMouseEnter(e, token)}
+                                  onMouseLeave={handleWordMouseLeave}
+                                  className={`token-word ${token.isKeyPhrase ? 'inline-block' : (isCjk ? 'inline' : 'inline-block')} ${tokenSpacing} rounded transition-transform cursor-pointer hover:scale-105 active:scale-95 group/token ${getTokenColorClass(token)}`}
+                                >
+                                  <span>{token.text}</span>
+                                  {isMixedMode && (token.phraseMeaning && token.isPhraseEnd ? (
+                                    <span className="ml-1 mr-0.5 text-[0.82em] font-medium text-emerald-300/90 group-hover/token:text-emerald-200 select-none">
+                                      ({token.phraseMeaning})
+                                    </span>
+                                  ) : (!hasKeyPhrases && !token.phraseId && token.contextMeaning ? (
+                                    <span className="ml-1 mr-0.5 text-[0.82em] font-medium text-emerald-300/90 group-hover/token:text-emerald-200 select-none">
+                                      ({token.contextMeaning})
+                                    </span>
+                                  ) : null))}
                                 </span>
-                              ) : (!hasKeyPhrases && !token.phraseId && token.contextMeaning ? (
-                                <span className="ml-1 mr-0.5 text-[0.82em] font-medium text-emerald-300/90 group-hover/token:text-emerald-200 select-none">
-                                  ({token.contextMeaning})
+                              ) : (
+                                <span key={token.id} className="select-text inline">
+                                  {token.text}
                                 </span>
-                              ) : null))}
-                            </span>
+                              );
+                            })
                           ) : (
-                            <span key={token.id} className="select-text inline">
-                              {token.text}
-                            </span>
-                          );
-                        })
-                      ) : (
-                        <span className="inline">{activeCue.textEn}</span>
+                            <span className="inline">{activeCue.textEn}</span>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
 
-                  {/* 2. Translation Line (Concise single line, strictly controlled by settings in mixed mode) */}
-                  {((!isMixedMode && (settings.subtitleMode === 'both' || settings.showChinese)) ||
-                    (isMixedMode && Boolean(settings.showTranslationInMixedMode))) && (
-                    activeCue?.textZh && activeCue.textZh.trim() !== (activeCue.textEn || '').trim() ? (
-                      <div
-                        className={`text-white mt-1 font-semibold tracking-wide lr-text-shadow leading-normal text-center whitespace-normal break-words ${
-                          settings.maskChinese
-                            ? 'filter blur-[5px] hover:blur-none transition-all duration-200 cursor-pointer select-none hover:select-text'
-                            : ''
-                        }`}
-                        style={{ fontSize: `${Math.max(14, Math.round(settings.subtitleFontSize * 0.86))}px`, textShadow: '0 0 7px rgba(0,0,0,.98), 0 0 16px rgba(0,0,0,.8)' }}
-                        title={settings.maskChinese ? '听力盲听遮罩已开启，鼠标悬停显示中文释义' : undefined}
-                      >
-                        {activeCue.textZh}
-                      </div>
-                    ) : null
-                  )}
+                      {/* 2. Translation Line (Concise single line, strictly controlled by settings in mixed mode) */}
+                      {((!isMixedMode && (settings.subtitleMode === 'both' || settings.showChinese)) ||
+                        (isMixedMode && Boolean(settings.showTranslationInMixedMode))) && (
+                        activeCue?.textZh && activeCue.textZh.trim() !== (activeCue.textEn || '').trim() ? (
+                          <div
+                            className={`text-white mt-1 font-semibold tracking-wide lr-text-shadow leading-normal text-center whitespace-normal break-words ${
+                              settings.maskChinese
+                                ? 'filter blur-[5px] hover:blur-none transition-all duration-200 cursor-pointer select-none hover:select-text'
+                                : ''
+                            }`}
+                            style={{ fontSize: `${Math.max(14, Math.round(settings.subtitleFontSize * 0.86))}px`, textShadow: '0 0 7px rgba(0,0,0,.98), 0 0 16px rgba(0,0,0,.8)' }}
+                            title={settings.maskChinese ? '听力盲听遮罩已开启，鼠标悬停显示中文释义' : undefined}
+                          >
+                            {activeCue.textZh}
+                          </div>
+                        ) : null
+                      )}
                     </div>
                   );
                 })()}
-
-                {!isAd && (
-                  <button
-                    type="button"
-                    onMouseDown={handleDragStart}
-                    onDoubleClick={() => updateSettings({ subtitleBottomPercent: 8 })}
-                    title={t.subtitleOverlay.dragTip || '拖拽调节垂直高度 (双击复位)'}
-                    aria-label="拖动字幕位置"
-                    className="group/inline-drag pointer-events-auto relative shrink-0 rounded-full border border-white/20 bg-black/55 p-2 text-gray-300 opacity-40 shadow-lg backdrop-blur transition-opacity hover:border-cyan-300/70 hover:text-cyan-200 group-hover/sub:opacity-80 hover:!opacity-100 cursor-row-resize"
-                  >
-                    <GripHorizontal size={16} />
-                  </button>
-                )}
-
-                {/* Right-Side AP (Auto-Pause) Switch (Language Reactor 1:1, hidden during ads) */}
-                {!isAd && (
-                  <div className="flex flex-col items-center select-none flex-shrink-0 pointer-events-auto">
-                    <button
-                      type="button"
-                      onClick={() => setAutoPauseAfterSentence(!autoPauseAfterSentence)}
-                      title={autoPauseAfterSentence ? 'AP: 单句跟读暂停已开启 (点击关闭)' : 'AP: 开启单句跟读自动暂停 (点击开启)'}
-                      className="flex flex-col items-center space-y-1 group/ap p-1 rounded-xl hover:bg-black/40 backdrop-blur-sm transition-all"
-                    >
-                      <div className={`w-10 h-5 rounded-full transition-all relative flex items-center px-0.5 border ${
-                        autoPauseAfterSentence
-                          ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.7)]'
-                          : 'bg-[#1e1e24] border-white/20 hover:border-white/40'
-                      }`}>
-                        <div className={`w-4 h-4 rounded-full bg-white transition-transform shadow-md ${
-                          autoPauseAfterSentence ? 'translate-x-5' : 'translate-x-0'
-                        }`} />
-                      </div>
-                      <span className={`text-[11px] font-bold font-mono tracking-wider transition-colors ${
-                        autoPauseAfterSentence ? 'text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'text-gray-400 group-hover/ap:text-gray-200'
-                      }`}>
-                        AP
-                      </span>
-                    </button>
-                  </div>
-                )}
               </div>
-
             </div>
-          ) : null}
+          )}
+
+          {/* 2.2 Right-Side Controls (Drag Handle + AP Switch): Always fixed to the right side of the video area */}
+          {!isAd && (
+            <div className="absolute right-4 sm:right-6 bottom-1 flex items-center space-x-2.5 shrink-0 pointer-events-auto z-10">
+              {/* Vertical Drag Handle */}
+              <button
+                type="button"
+                onMouseDown={handleDragStart}
+                onDoubleClick={() => updateSettings({ subtitleBottomPercent: 8 })}
+                title={t.subtitleOverlay.dragTip || '拖拽调节垂直高度 (双击复位)'}
+                aria-label="拖动字幕位置"
+                className={`group/inline-drag relative shrink-0 rounded-full border border-white/20 bg-black/60 p-2 text-gray-300 shadow-lg backdrop-blur transition-all hover:border-cyan-300/70 hover:text-cyan-200 hover:opacity-100 cursor-row-resize lr-btn-shadow ${
+                  isDragging ? 'opacity-100 border-cyan-300/80 text-cyan-200 scale-105' : 'opacity-60'
+                }`}
+              >
+                <GripHorizontal size={16} />
+              </button>
+
+              {/* Right-Side AP (Auto-Pause) Switch (Language Reactor 1:1, hidden during ads) */}
+              <div className="flex flex-col items-center select-none shrink-0 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => setAutoPauseAfterSentence(!autoPauseAfterSentence)}
+                  title={autoPauseAfterSentence ? 'AP: 单句跟读暂停已开启 (点击关闭)' : 'AP: 开启单句跟读自动暂停 (点击开启)'}
+                  className={`flex flex-col items-center space-y-1 group/ap p-1 rounded-xl hover:bg-black/40 backdrop-blur-sm transition-all lr-btn-shadow ${
+                    autoPauseAfterSentence ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <div className={`w-10 h-5 rounded-full transition-all relative flex items-center px-0.5 border ${
+                    autoPauseAfterSentence
+                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.7)]'
+                      : 'bg-[#1e1e24] border-white/20 hover:border-white/40'
+                  }`}>
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform shadow-md ${
+                      autoPauseAfterSentence ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </div>
+                  <span className={`text-[11px] font-bold font-mono tracking-wider transition-colors ${
+                    autoPauseAfterSentence ? 'text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'text-gray-400 group-hover/ap:text-gray-200'
+                  }`}>
+                    AP
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+      )}
 
       {/* 3. Hover Tooltip for Instant Contextual Meaning */}
       {hoveredTokenInfo && !selectedWord && cues[currentCueIndex] && (

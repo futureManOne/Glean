@@ -136,6 +136,11 @@ export const STORAGE_KEY_SECURITY_MIGRATION = 'glean_security_migration_v1';
 
 const DEFAULT_SETTINGS: AppSettings = {
   pluginEnabled: true,
+  enabledPlatforms: {
+    youtube: true,
+    bilibili: true,
+    quark: true
+  },
   aiProvider: 'google',
   apiKey: '',
   apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
