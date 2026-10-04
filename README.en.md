@@ -400,6 +400,12 @@ bun run build     # build smoke test
 
 ---
 
+## 🤝 Community & Links
+
+- [LINUX DO](https://linux.do/) — A vibrant geek, open-source, and developer community
+
+---
+
 ## 🙏 Acknowledgments
 
 - Special thanks to the [LINUX DO](https://linux.do/) community and open-source enthusiasts for their support, feedback, and technical discussions.
