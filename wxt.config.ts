@@ -9,7 +9,7 @@ export default defineConfig({
   manifest: {
     name: 'Glean 拾句 - Bilingual Video Learning',
     description: 'Glean (拾句) - Learn languages with interactive bilingual subtitles on YouTube, Bilibili, and Quark Pan.',
-    version: '1.0.0',
+    version: '1.1.0',
     permissions: ['storage', 'activeTab'],
     host_permissions: [
       'https://*.bilibili.com/*',
