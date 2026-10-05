@@ -1,6 +1,6 @@
 {
   "name": "glean",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Glean (拾句) - Interactive bilingual video learning extension for YouTube, Bilibili, and Quark Pan",
   "private": true,
   "type": "module",

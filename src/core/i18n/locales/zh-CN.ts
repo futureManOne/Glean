@@ -3,7 +3,7 @@ export const zhCN = {
   brand: 'Glean 拾句',
   appName: 'Glean 拾句',
   appSubtitle: '开源沉浸式双语视频学习浏览器插件',
-  version: 'v1.0.0',
+  version: 'v1.1.0',
   close: '关闭',
   save: '保存',
   saveAndClose: '保存并关闭',

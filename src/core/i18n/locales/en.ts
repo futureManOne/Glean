@@ -5,7 +5,7 @@ export const en: TranslationSchema = {
   brand: 'Glean',
   appName: 'Glean',
   appSubtitle: 'Open-source immersive bilingual video learning extension',
-  version: 'v1.0.0',
+  version: 'v1.1.0',
   close: 'Close',
   save: 'Save',
   saveAndClose: 'Save & Close',
