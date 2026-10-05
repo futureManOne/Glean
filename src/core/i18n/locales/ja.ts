@@ -5,7 +5,7 @@ export const ja: TranslationSchema = {
   brand: 'Glean（拾句）',
   appName: 'Glean（拾句）',
   appSubtitle: 'オープンソースの没入型バイリンガル動画学習ブラウザ拡張',
-  version: 'v1.1.0',
+  version: 'v1.1.1',
   close: '閉じる',
   save: '保存',
   saveAndClose: '保存して閉じる',
