@@ -20,7 +20,7 @@ docs/.vitepress/cache
 *.key
 
 # Tests & Coverage
-tests/
+coverage/
 test-results/
 playwright-report/
 blob-report/
