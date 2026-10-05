@@ -142,7 +142,7 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-[11px] font-medium text-gray-400">{t.settingsModal.mixedGlossDensity}</label>
-              <span className="text-[11px] text-cyan-300">{densityLabel(settings.mixedGlossDensity || 'medium')}</span>
+              <span className="text-[11px] text-cyan-300">{densityLabel(settings.mixedGlossDensity || 'high')}</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {(['low', 'medium', 'high'] as MixedGlossDensity[]).map((level) => (
@@ -150,7 +150,7 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
                   key={level}
                   type="button"
                   onClick={() => updateSettings({ mixedGlossDensity: level })}
-                  className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${(settings.mixedGlossDensity || 'medium') === level ? 'border-cyan-300/60 bg-cyan-300/15 text-cyan-200' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.07] hover:text-gray-200'}`}
+                  className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${(settings.mixedGlossDensity || 'high') === level ? 'border-cyan-300/60 bg-cyan-300/15 text-cyan-200' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.07] hover:text-gray-200'}`}
                 >
                   {densityLabel(level)}
                 </button>
@@ -183,8 +183,8 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
 
           <div className="grid grid-cols-2 gap-4">
             <label className="space-y-2">
-              <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.subtitleFontSize}</span><b className="font-mono text-cyan-300">{settings.subtitleFontSize || 18}px</b></span>
-              <input type="range" min="14" max="36" value={settings.subtitleFontSize || 18} onChange={(event) => updateSettings({ subtitleFontSize: Number(event.target.value) })} className="w-full accent-cyan-400" />
+              <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.subtitleFontSize}</span><b className="font-mono text-cyan-300">{settings.subtitleFontSize || 23}px</b></span>
+              <input type="range" min="14" max="36" value={settings.subtitleFontSize || 23} onChange={(event) => updateSettings({ subtitleFontSize: Number(event.target.value) })} className="w-full accent-cyan-400" />
             </label>
             <label className="space-y-2">
               <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.transcriptFontSize}</span><b className="font-mono text-cyan-300">{settings.transcriptFontSize || 15}px</b></span>
@@ -193,8 +193,8 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
           </div>
 
           <label className="block space-y-2">
-            <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.subtitleOpacity}</span><b className="font-mono text-cyan-300">{Math.round((settings.subtitleOpacity ?? 0.85) * 100)}%</b></span>
-            <input aria-label="字幕背景不透明度" type="range" min="0" max="100" step="5" value={Math.round((settings.subtitleOpacity ?? 0.85) * 100)} onChange={(event) => updateSettings({ subtitleOpacity: Number(event.target.value) / 100 })} className="w-full accent-cyan-400" />
+            <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.subtitleOpacity}</span><b className="font-mono text-cyan-300">{Math.round((settings.subtitleOpacity ?? 0) * 100)}%</b></span>
+            <input aria-label="字幕背景不透明度" type="range" min="0" max="100" step="5" value={Math.round((settings.subtitleOpacity ?? 0) * 100)} onChange={(event) => updateSettings({ subtitleOpacity: Number(event.target.value) / 100 })} className="w-full accent-cyan-400" />
             <button type="button" onClick={() => updateSettings({ subtitleOpacity: 0 })} className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-cyan-200 hover:bg-white/10">{settings.uiLanguage === 'en' ? '0% (Text only)' : settings.uiLanguage === 'ja' ? '0%（文字のみ）' : '全透明（仅文字）'}</button>
           </label>
 

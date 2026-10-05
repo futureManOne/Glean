@@ -148,24 +148,24 @@ const DEFAULT_SETTINGS: AppSettings = {
   uiLanguage: 'zh-CN',
   primaryLang: 'en',
   secondaryLang: 'zh-CN',
-  subtitleMode: 'both',
-  subtitleFontSize: 18,
+  subtitleMode: 'mixed',
+  subtitleFontSize: 23,
   transcriptFontSize: 15,
   sidePanelWidth: 420,
   subtitleBottomPercent: 8,
-  subtitleOpacity: 0.85,
+  subtitleOpacity: 0,
   showEnglish: true,
-  showChinese: true,
-  showTranslationInMixedMode: false,
+  showChinese: false,
+  showTranslationInMixedMode: true,
   mixedModeFilterLevel: 'all_content',
-  mixedGlossDensity: 'medium',
+  mixedGlossDensity: 'high',
   maskChinese: false,
   maskEnglish: false,
   autoPauseOnHover: false,
   autoPauseAfterSentence: false,
   highlightVocabulary: true,
   subtitleTimeOffset: 0,
-  ttsEngine: 'youdao-us',
+  ttsEngine: 'google',
   ttsVoice: '',
   ttsRate: 1.0,
   repeatCount: 1,
@@ -814,7 +814,7 @@ export const useAppStore = create<AppStoreState>((set, get) => {
       set({ isPlaying: !player.isPaused() });
     },
 
-    lastVisibleSubtitleMode: 'both',
+    lastVisibleSubtitleMode: 'mixed',
 
     setSubtitleMode: (mode: SubtitleMode) => {
       if (mode !== 'hidden') {
@@ -831,7 +831,7 @@ export const useAppStore = create<AppStoreState>((set, get) => {
 
     cycleSubtitleMode: () => {
       const modes: SubtitleMode[] = ['both', 'mixed', 'target', 'translation', 'hidden'];
-      const current = get().settings.subtitleMode || 'both';
+      const current = get().settings.subtitleMode || 'mixed';
       const nextIndex = (modes.indexOf(current) + 1) % modes.length;
       const nextMode = modes[nextIndex];
       if (nextMode === 'hidden') {
@@ -848,9 +848,9 @@ export const useAppStore = create<AppStoreState>((set, get) => {
     },
 
     toggleSubtitleVisibility: () => {
-      const current = get().settings.subtitleMode || 'both';
+      const current = get().settings.subtitleMode || 'mixed';
       if (current === 'hidden') {
-        const last = get().lastVisibleSubtitleMode || 'both';
+        const last = get().lastVisibleSubtitleMode || 'mixed';
         get().setSubtitleMode(last);
       } else {
         set({

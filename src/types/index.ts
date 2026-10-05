@@ -247,9 +247,9 @@ export interface AppSettings {
   subtitleOpacity: number;       // Background opacity (0 ~ 1.0); 0 renders text only
   showEnglish: boolean;
   showChinese: boolean;
-  showTranslationInMixedMode?: boolean; // 中英混合模式下是否在底部额外显示整句中文翻译 (默认 false)
+  showTranslationInMixedMode?: boolean; // 中英混合模式下是否在底部额外显示整句中文翻译 (默认 true)
   mixedModeFilterLevel?: 'all_content' | 'advanced_only'; // 混合模式词汇过滤级别 (默认 'all_content')
-  mixedGlossDensity?: MixedGlossDensity; // AI精翻覆盖密度: 'low'(轻度 1-2词) | 'medium'(标准 2-4词) | 'high'(密集 4-8+词), 默认 'medium'
+  mixedGlossDensity?: MixedGlossDensity; // AI精翻覆盖密度: 'low'(轻度 1-2词) | 'medium'(标准 2-4词) | 'high'(密集 4-8+词), 默认 'high'
   maskChinese: boolean;          // 听力盲听遮罩模式：模糊中文，鼠标悬停清晰
   maskEnglish: boolean;          // 模糊英文，鼠标悬停清晰
   autoPauseOnHover: boolean;
@@ -258,7 +258,7 @@ export interface AppSettings {
   subtitleTimeOffset: number;       // In seconds (e.g. +0.5, -0.5)
 
   // Audio & Word Pronunciation Settings
-  ttsEngine?: TtsAudioSource;       // 'youdao-us' (默认) | 'youdao-uk' | 'google' | 'system'
+  ttsEngine?: TtsAudioSource;       // 'google' (默认) | 'youdao-us' | 'youdao-uk' | 'system'
   ttsVoice?: string;                // 系统语音发音人名称 (空字符串为自动优选)
   ttsRate?: number;                 // 发音语速 0.7 ~ 1.3 (默认 1.0)
   

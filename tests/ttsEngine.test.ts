@@ -166,9 +166,9 @@ describe('TTS & Pronunciation Engine', () => {
   });
 
   describe('Audio Settings Store persistence', () => {
-    it('initializes with youdao-us human voice as default', () => {
+    it('initializes with google TTS voice as default', () => {
       const state = useAppStore.getState();
-      expect(state.settings.ttsEngine).toBe('youdao-us');
+      expect(state.settings.ttsEngine).toBe('google');
       expect(state.settings.ttsRate).toBe(1.0);
     });
 
@@ -187,7 +187,7 @@ describe('TTS & Pronunciation Engine', () => {
 
       // Reset back to defaults
       store.updateSettings({
-        ttsEngine: 'youdao-us',
+        ttsEngine: 'google',
         ttsRate: 1.0,
         ttsVoice: ''
       });

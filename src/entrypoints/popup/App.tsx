@@ -232,7 +232,7 @@ const App: React.FC = () => {
             <span>字幕外观与背景</span>
           </span>
           <span className="text-[11px] font-mono font-semibold text-blue-400">
-            {Math.round((settings.subtitleOpacity ?? 0.85) * 100)}%
+            {Math.round((settings.subtitleOpacity ?? 0) * 100)}%
           </span>
         </div>
 
@@ -252,7 +252,7 @@ const App: React.FC = () => {
                   type="button"
                   onClick={() => updateSettings({ subtitleOpacity: p.val })}
                   className={`px-1.5 py-0.5 rounded text-[9px] border transition-colors ${
-                    (settings.subtitleOpacity ?? 0.85) === p.val
+                    (settings.subtitleOpacity ?? 0) === p.val
                       ? 'bg-blue-600/30 border-blue-500 text-blue-300 font-medium'
                       : 'bg-[#242429] border-[#2e2e38] text-gray-400 hover:text-gray-200'
                   }`}
@@ -267,7 +267,7 @@ const App: React.FC = () => {
             min="0"
             max="100"
             step="5"
-            value={Math.round((settings.subtitleOpacity ?? 0.85) * 100)}
+            value={Math.round((settings.subtitleOpacity ?? 0) * 100)}
             onChange={(e) => updateSettings({ subtitleOpacity: parseInt(e.target.value, 10) / 100 })}
             className="w-full accent-blue-500 cursor-pointer h-1.5 bg-[#2a2a32] rounded-lg appearance-none"
           />

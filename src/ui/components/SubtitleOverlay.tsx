@@ -322,7 +322,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
               <div className="relative flex items-center justify-center max-w-full pointer-events-none">
                 {/* Main Subtitle Content Capsule (Optimized for sleek single-line display matching LR) */}
                 {(() => {
-                  const opacity = settings.subtitleOpacity ?? 0.85;
+                  const opacity = settings.subtitleOpacity ?? 0;
                   const isTransparent = opacity === 0;
                   const capsuleStyle: React.CSSProperties = {
                     backgroundColor: isTransparent ? 'transparent' : `rgba(18, 18, 22, ${opacity})`,

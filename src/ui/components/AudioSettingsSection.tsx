@@ -17,7 +17,7 @@ export const AudioSettingsSection: React.FC = () => {
   const [systemVoices, setSystemVoices] = useState<SystemVoiceInfo[]>([]);
   const [isPlayingTest, setIsPlayingTest] = useState(false);
 
-  const currentEngine: TtsAudioSource = settings.ttsEngine || 'youdao-us';
+  const currentEngine: TtsAudioSource = settings.ttsEngine || 'google';
   const currentVoice = settings.ttsVoice || '';
   const currentRate = settings.ttsRate ?? 1.0;
 

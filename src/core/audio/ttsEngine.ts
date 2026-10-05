@@ -63,7 +63,7 @@ let cachedVoices: SpeechSynthesisVoice[] = [];
 /**
  * Returns audio streaming URL for dictionary / neural audio sources
  */
-export function getAudioUrl(text: string, source: TtsAudioSource = 'youdao-us'): string | null {
+export function getAudioUrl(text: string, source: TtsAudioSource = 'google'): string | null {
   const clean = text.trim();
   if (!clean) return null;
   const encoded = encodeURIComponent(clean);
@@ -285,7 +285,7 @@ export function playPronunciation(text: string, options: PronounceOptions = {}):
     return;
   }
 
-  const source = options.source || 'youdao-us';
+  const source = options.source || 'google';
   const rate = options.rate ?? 1.0;
 
   // If system voice is explicitly selected, use Web Speech API directly

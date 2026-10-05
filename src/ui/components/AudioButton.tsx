@@ -25,7 +25,7 @@ export function playWordAudio(
   if (!clean) return;
 
   const currentSettings = useAppStore.getState().settings;
-  const source = options?.source ?? currentSettings?.ttsEngine ?? 'youdao-us';
+  const source = options?.source ?? currentSettings?.ttsEngine ?? 'google';
   const voiceName = options?.voiceName ?? currentSettings?.ttsVoice ?? '';
   const rate = options?.rate ?? currentSettings?.ttsRate ?? 1.0;
 

@@ -1219,7 +1219,7 @@ CRITICAL INSTRUCTIONS:
 
     const promptItems = chunk.map(c => ({ id: c.id, textEn: c.textEn }));
     const isSourceZh = detectSourceLanguage(chunk) === 'zh';
-    const density = settings.mixedGlossDensity || 'medium';
+    const density = settings.mixedGlossDensity || 'high';
     const systemPrompt = buildMixedTranslationPrompt(isSourceZh, density);
 
     const response = await callLlmChat(
