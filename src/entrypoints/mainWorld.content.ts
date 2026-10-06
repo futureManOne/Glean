@@ -52,14 +52,15 @@ function initYouTubeMainWorld() {
       }
     }
 
-    // Intercept XMLHttpRequest to capture Proof of Origin Token (pot) and timedtext
+    // Hook window.fetch & XMLHttpRequest to capture Proof of Origin Token (pot) and timedtext
+    const origFetch = window.fetch;
     try {
       const origXhrOpen = XMLHttpRequest.prototype.open;
       const origXhrSend = XMLHttpRequest.prototype.send;
-      XMLHttpRequest.prototype.open = function(method: string, url: any, ...rest: any[]) {
+      XMLHttpRequest.prototype.open = function(method: string, url: any) {
         (this as any).__lr_yt_url = typeof url === 'string' ? url : (url && url.href) || String(url);
         if (typeof url === 'string') capturePot(url);
-        return origXhrOpen.apply(this, [method, url, ...rest] as any);
+        return origXhrOpen.apply(this, arguments as any);
       };
       XMLHttpRequest.prototype.send = function(...args: any[]) {
         this.addEventListener('load', function() {
@@ -97,10 +98,10 @@ function initYouTubeMainWorld() {
               }
 
               Promise.all([
-                origFetch(origJson3, { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null),
-                origFetch(transJson3, { credentials: 'same-origin' })
+                origFetch.call(window, origJson3, { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null),
+                origFetch.call(window, transJson3, { credentials: 'same-origin' })
                   .then(r => r.ok ? r.json() : null)
-                  .then(d => d || origFetch(transJson3.replace('tlang=zh-Hans', 'tlang=zh'), { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null))
+                  .then(d => d || origFetch.call(window, transJson3.replace('tlang=zh-Hans', 'tlang=zh'), { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null))
                   .catch(() => null)
               ]).then(([origD, transD]) => {
                 if (origD && origD.events && origD.events.length > 0) {
@@ -345,9 +346,8 @@ function initYouTubeMainWorld() {
     }
 
     // Hook window.fetch
-    const origFetch = window.fetch;
-    window.fetch = async function(...args: any[]) {
-      const resp = await origFetch.apply(this, args as [any, any]);
+    window.fetch = function(...args: any[]) {
+      const promise = origFetch.apply(window, args as any);
       try {
         const url = typeof args[0] === 'string' ? args[0] : (args[0] && (args[0].url || args[0].href)) || '';
         if (url) capturePot(url);
@@ -384,10 +384,10 @@ function initYouTubeMainWorld() {
           }
 
           Promise.all([
-            origFetch(origJson3, { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null),
-            origFetch(transJson3, { credentials: 'same-origin' })
+            origFetch.call(window, origJson3, { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null),
+            origFetch.call(window, transJson3, { credentials: 'same-origin' })
               .then(r => r.ok ? r.json() : null)
-              .then(d => d || origFetch(transJson3.replace('tlang=zh-Hans', 'tlang=zh'), { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null))
+              .then(d => d || origFetch.call(window, transJson3.replace('tlang=zh-Hans', 'tlang=zh'), { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null))
               .catch(() => null)
           ]).then(([origD, transD]) => {
             if (origD && origD.events && origD.events.length > 0) {
@@ -397,7 +397,7 @@ function initYouTubeMainWorld() {
           }).catch(() => {});
         }
       } catch (_) {}
-      return resp;
+      return promise;
     };
 
     // Polling retry on initial load and navigation
@@ -611,39 +611,41 @@ function initBilibiliMainWorld() {
   try {
     const origXhrOpen = XMLHttpRequest.prototype.open;
     const origXhrSend = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.open = function(method: string, url: any, ...rest: any[]) {
+    XMLHttpRequest.prototype.open = function(method: string, url: any) {
       (this as any).__lr_bili_url = typeof url === 'string' ? url : (url && url.href) || String(url);
-      return origXhrOpen.apply(this, [method, url, ...rest] as any);
+      return origXhrOpen.apply(this, arguments as any);
     };
     XMLHttpRequest.prototype.send = function(...args: any[]) {
       this.addEventListener('load', function() {
         try {
           const reqUrl = (this as any).__lr_bili_url || '';
-          if (reqUrl.includes('aisubtitle.hdslb.com') || reqUrl.includes('/ai_subtitle/')) {
-            const txt = this.responseText;
-            if (txt && txt.includes('"body"')) {
-              const json = JSON.parse(txt);
-              if (json && Array.isArray(json.body)) {
-                const lang = (json.lang || '').toLowerCase();
-                cachedSubtitles[lang] = json;
-                if (cachedSubtitles['ai-en'] && cachedSubtitles['ai-zh']) {
-                  mergeAndDispatchDualTracks(cachedSubtitles['ai-en'], cachedSubtitles['ai-zh'], 'network');
-                } else {
-                  window.postMessage({
-                    type: '__LR_BILI_SUBTITLE__',
-                    content: txt,
-                    source: 'network'
-                  }, '*');
+          if (this.responseType === '' || this.responseType === 'text') {
+            if (reqUrl.includes('aisubtitle.hdslb.com') || reqUrl.includes('/ai_subtitle/')) {
+              const txt = this.responseText;
+              if (txt && txt.includes('"body"')) {
+                const json = JSON.parse(txt);
+                if (json && Array.isArray(json.body)) {
+                  const lang = (json.lang || '').toLowerCase();
+                  cachedSubtitles[lang] = json;
+                  if (cachedSubtitles['ai-en'] && cachedSubtitles['ai-zh']) {
+                    mergeAndDispatchDualTracks(cachedSubtitles['ai-en'], cachedSubtitles['ai-zh'], 'network');
+                  } else {
+                    window.postMessage({
+                      type: '__LR_BILI_SUBTITLE__',
+                      content: txt,
+                      source: 'network'
+                    }, '*');
+                  }
                 }
               }
-            }
-          } else if (reqUrl.includes('/x/player/v2') || reqUrl.includes('/x/player/wbi/v2') || reqUrl.includes('/dm/web/view')) {
-            const txt = this.responseText;
-            if (txt && txt.includes('"subtitle"')) {
-              const json = JSON.parse(txt);
-              const subs = json?.data?.subtitle?.subtitles;
-              if (Array.isArray(subs) && subs.length > 0) {
-                fetchAndProcessSubtitles(subs);
+            } else if (reqUrl.includes('/x/player/v2') || reqUrl.includes('/x/player/wbi/v2') || reqUrl.includes('/dm/web/view')) {
+              const txt = this.responseText;
+              if (txt && txt.includes('"subtitle"')) {
+                const json = JSON.parse(txt);
+                const subs = json?.data?.subtitle?.subtitles;
+                if (Array.isArray(subs) && subs.length > 0) {
+                  fetchAndProcessSubtitles(subs);
+                }
               }
             }
           }
@@ -653,39 +655,43 @@ function initBilibiliMainWorld() {
     };
 
     const origFetch = window.fetch;
-    window.fetch = async function(...args: any[]) {
-      const resp = await origFetch.apply(this, args as [any, any]);
+    window.fetch = function(...args: any[]) {
+      const promise = origFetch.apply(window, args as any);
       try {
         const url = typeof args[0] === 'string' ? args[0] : (args[0] && (args[0].url || args[0].href)) || '';
         if (url.includes('aisubtitle.hdslb.com') || url.includes('/ai_subtitle/')) {
-          resp.clone().text().then(txt => {
-            if (txt && txt.includes('"body"')) {
-              const json = JSON.parse(txt);
-              if (json && Array.isArray(json.body)) {
-                const lang = (json.lang || '').toLowerCase();
-                cachedSubtitles[lang] = json;
-                if (cachedSubtitles['ai-en'] && cachedSubtitles['ai-zh']) {
-                  mergeAndDispatchDualTracks(cachedSubtitles['ai-en'], cachedSubtitles['ai-zh'], 'network');
-                } else {
-                  window.postMessage({
-                    type: '__LR_BILI_SUBTITLE__',
-                    content: txt,
-                    source: 'network'
-                  }, '*');
+          promise.then((resp: Response) => {
+            resp.clone().text().then(txt => {
+              if (txt && txt.includes('"body"')) {
+                const json = JSON.parse(txt);
+                if (json && Array.isArray(json.body)) {
+                  const lang = (json.lang || '').toLowerCase();
+                  cachedSubtitles[lang] = json;
+                  if (cachedSubtitles['ai-en'] && cachedSubtitles['ai-zh']) {
+                    mergeAndDispatchDualTracks(cachedSubtitles['ai-en'], cachedSubtitles['ai-zh'], 'network');
+                  } else {
+                    window.postMessage({
+                      type: '__LR_BILI_SUBTITLE__',
+                      content: txt,
+                      source: 'network'
+                    }, '*');
+                  }
                 }
               }
-            }
+            }).catch(() => {});
           }).catch(() => {});
         } else if (url.includes('/x/player/v2') || url.includes('/x/player/wbi/v2') || url.includes('/dm/web/view')) {
-          resp.clone().json().then(data => {
-            const subs = data?.data?.subtitle?.subtitles;
-            if (Array.isArray(subs) && subs.length > 0) {
-              fetchAndProcessSubtitles(subs);
-            }
+          promise.then((resp: Response) => {
+            resp.clone().json().then(data => {
+              const subs = data?.data?.subtitle?.subtitles;
+              if (Array.isArray(subs) && subs.length > 0) {
+                fetchAndProcessSubtitles(subs);
+              }
+            }).catch(() => {});
           }).catch(() => {});
         }
       } catch (_) {}
-      return resp;
+      return promise;
     };
   } catch (_) {}
 

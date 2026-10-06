@@ -149,9 +149,18 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
         // Only embed into right-container in normal mode.
         // In web fullscreen or fullscreen, sidebar smoothly switches to alongside player.
         if (!isBilibiliFullscreenOrWeb()) {
-          next = document.querySelector<HTMLElement>(
-            '.right-container, #right-container, .recommend-list-v1, #recom_list, .plp-r, .r-con, .playlist-container, .side-container, [class*="recommend-list"]'
+          const app = document.getElementById('app');
+          const isHydrating = Boolean(app && app.hasAttribute('data-server-rendered'));
+          // Wait until Bilibili's Vue app has finished server-side hydration and the mini header has mounted
+          const isHeaderReady = Boolean(
+            document.querySelector('.bili-header--mini, .bili-header--fixed') ||
+            (document.getElementById('biliMainHeader') && !isHydrating)
           );
+          if (!isHydrating && isHeaderReady) {
+            next = document.querySelector<HTMLElement>(
+              '.right-container, #right-container, .recommend-list-v1, #recom_list, .plp-r, .r-con, .playlist-container, .side-container, [class*="recommend-list"]'
+            );
+          }
         }
       }
 
@@ -178,7 +187,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ['class', 'data-screen', 'data-player-mode']
+        attributeFilter: ['class', 'data-screen', 'data-player-mode', 'data-server-rendered']
       });
     }
     window.addEventListener('yt-navigate-finish', syncSecondary);

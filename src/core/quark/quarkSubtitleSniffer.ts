@@ -881,23 +881,27 @@ export class QuarkSubtitleSniffer {
 
         // Hook window.fetch
         const origFetch = window.fetch;
-        window.fetch = async function(...args) {
-          const resp = await origFetch.apply(this, args);
+        window.fetch = function(...args) {
+          const promise = origFetch.apply(window, args);
           try {
             const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
             if (isSubtitleUrl(url)) {
-              const clone = resp.clone();
-              clone.text().then(function(txt) {
-                checkAndDispatch(txt, url);
+              promise.then(function(resp) {
+                const clone = resp.clone();
+                clone.text().then(function(txt) {
+                  checkAndDispatch(txt, url);
+                }).catch(function() {});
               }).catch(function() {});
             } else if (url.includes('/drive/') || url.includes('/share/') || url.includes('/file/')) {
-              const clone = resp.clone();
-              clone.json().then(function(json) {
-                inspectJsonForSubtitles(json);
+              promise.then(function(resp) {
+                const clone = resp.clone();
+                clone.json().then(function(json) {
+                  inspectJsonForSubtitles(json);
+                }).catch(function() {});
               }).catch(function() {});
             }
           } catch(_) {}
-          return resp;
+          return promise;
         };
 
         // Hook XMLHttpRequest
@@ -911,13 +915,15 @@ export class QuarkSubtitleSniffer {
           this.addEventListener('load', function() {
             try {
               const u = this.__lr_url || '';
-              if (isSubtitleUrl(u)) {
-                checkAndDispatch(this.responseText, u);
-              } else if (u.includes('/drive/') || u.includes('/share/') || u.includes('/file/')) {
-                try {
-                  const json = JSON.parse(this.responseText);
-                  inspectJsonForSubtitles(json);
-                } catch(_) {}
+              if (this.responseType === '' || this.responseType === 'text') {
+                if (isSubtitleUrl(u)) {
+                  checkAndDispatch(this.responseText, u);
+                } else if (u.includes('/drive/') || u.includes('/share/') || u.includes('/file/')) {
+                  try {
+                    const json = JSON.parse(this.responseText);
+                    inspectJsonForSubtitles(json);
+                  } catch(_) {}
+                }
               }
             } catch(_) {}
           });

@@ -201,14 +201,18 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
       }
     `;
 
-    // Notify Video.js / browser to recalculate video dimensions
-    window.dispatchEvent(new Event('resize'));
-    const t1 = setTimeout(() => window.dispatchEvent(new Event('resize')), 60);
-    const t2 = setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
+    // Notify Video.js / browser to recalculate video dimensions (only needed for Quark Pan layout shifts)
+    let t1: any = null;
+    let t2: any = null;
+    if (window.location.hostname.includes('quark.cn')) {
+      window.dispatchEvent(new Event('resize'));
+      t1 = setTimeout(() => window.dispatchEvent(new Event('resize')), 60);
+      t2 = setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
+    }
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      if (t1) clearTimeout(t1);
+      if (t2) clearTimeout(t2);
       styleEl?.remove();
     };
   }, [isSidePanelOpen, settings.sidePanelWidth, settings.pluginEnabled]);
