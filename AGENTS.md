@@ -73,3 +73,19 @@
   bun run build
   ```
   确保 Chrome MV3 打包产物（manifest.json、content-scripts、popup、background.js）零警告零报错输出。
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+GitHub issues on `futureManOne/Glean`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical five-role triage labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.

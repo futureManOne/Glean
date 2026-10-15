@@ -1,8 +1,8 @@
 import { SubtitleCue } from '@/types';
-import { parseSubtitleContent, splitBilingualLines } from '../subtitle/parser';
+import { parseSubtitleContent, splitBilingualLines, isValidSubtitleText } from '../subtitle/parser';
 import { useAppStore } from '@/store/useAppStore';
 import { VideoPlayerAdapter } from '../player/BaseAdapter';
-import { isValidSubtitleText } from '../youtube/youtubeSubtitleSniffer';
+import type { SubtitleSniffer } from '../subtitle/snifferManager';
 import { bilingualTranslator } from '../ai/bilingualTranslator';
 
 export interface EpisodeInfo {
@@ -203,7 +203,7 @@ function isValidQuarkTitle(t: string): boolean {
 /**
  * Quark Subtitle Sniffer (Exclusively for Quark Pan)
  */
-export class QuarkSubtitleSniffer {
+export class QuarkSubtitleSniffer implements SubtitleSniffer {
   private player: VideoPlayerAdapter;
   private isSniffing = false;
   private domObserver: MutationObserver | null = null;

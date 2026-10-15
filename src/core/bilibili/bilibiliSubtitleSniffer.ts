@@ -3,6 +3,7 @@ import { parseSubtitleContent, splitBilingualLines, isValidSubtitleText } from '
 import { tokenizeSentence } from '../subtitle/tokenizer';
 import { useAppStore } from '@/store/useAppStore';
 import { VideoPlayerAdapter } from '../player/BaseAdapter';
+import type { SubtitleSniffer } from '../subtitle/snifferManager';
 import { bilingualTranslator } from '../ai/bilingualTranslator';
 
 export interface BilibiliSubtitleItem {
@@ -101,7 +102,7 @@ export function parseBilibiliSubtitleJson(jsonOrStr: any): SubtitleCue[] {
  * Bilibili Subtitle Sniffer
  * Implements the Four-Layer Subtitle Sniffing Architecture for Bilibili
  */
-export class BilibiliSubtitleSniffer {
+export class BilibiliSubtitleSniffer implements SubtitleSniffer {
   private player: VideoPlayerAdapter;
   private isSniffing = false;
   private domObserver: MutationObserver | null = null;

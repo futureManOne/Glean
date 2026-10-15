@@ -9,6 +9,7 @@ import {
   AI_PRESETS
 } from '@/types';
 import { callLlmChat, callLlmChatStream } from '@/core/api/llmClient';
+import { getSentenceAnalysisCache, setSentenceAnalysisCache } from '@/core/dictionary/aiCache';
 
 /**
  * Robust zero-failure JSON cleaner and parser for sentence analysis.
@@ -22,7 +23,7 @@ export function sanitizeAndParseJson<T>(raw: string, fallbackFactory: () => T): 
   // 1. Direct parse attempt
   try {
     return JSON.parse(raw) as T;
-  } catch (_) {
+  } catch {
     // Continue to sanitization pipeline
   }
 
@@ -45,7 +46,7 @@ export function sanitizeAndParseJson<T>(raw: string, fallbackFactory: () => T): 
   // 5. Second attempt with sanitized string
   try {
     return JSON.parse(cleaned) as T;
-  } catch (_) {
+  } catch {
     // Continue to lenient quote and escape recovery
   }
 
@@ -551,6 +552,17 @@ export async function analyzeSentenceInContext(
 
   try {
     const targetLang: SupportedLang = settings.uiLanguage || (settings.secondaryLang === 'ja' ? 'ja' : settings.secondaryLang === 'en' ? 'en' : 'zh-CN');
+
+    // 1. Instant 0ms cache hit check
+    try {
+      const cached = await getSentenceAnalysisCache(sentenceEn, targetLang);
+      if (cached) {
+        return cached;
+      }
+    } catch {
+      // Non-fatal cache lookup failure
+    }
+
     const prompt = buildSentencePrompt(sentenceEn, sentenceZh, targetLang);
     const provider = settings.aiProvider || 'google';
     const defaultBaseUrl = AI_PRESETS[provider]?.apiBaseUrl || AI_PRESETS.google.apiBaseUrl;
@@ -580,14 +592,14 @@ export async function analyzeSentenceInContext(
     );
 
     // Multi-stage JSON sanitization
-    const parsed = sanitizeAndParseJson<any>(rawResponse, () => null);
+    const parsed = sanitizeAndParseJson<Record<string, unknown> | null>(rawResponse, () => null);
 
     if (parsed && typeof parsed === 'object') {
       const authenticTranslation = String(parsed.authenticTranslation || sentenceZh || sentenceEn);
       const contextTone = String(parsed.contextTone || '客观自然原声叙述');
 
       const syntacticBreakdown: SentenceSyntacticBreakdown[] = Array.isArray(parsed.syntacticBreakdown) && parsed.syntacticBreakdown.length > 0
-        ? parsed.syntacticBreakdown.map((item: any) => ({
+        ? (parsed.syntacticBreakdown as Array<Record<string, unknown>>).map((item) => ({
             clause: String(item.clause || ''),
             role: String(item.role || '核心成分'),
             explanation: String(item.explanation || '')
@@ -595,7 +607,7 @@ export async function analyzeSentenceInContext(
         : generateOfflineSentenceAnalysis(cue).syntacticBreakdown;
 
       const idiomsAndPhrases: SentenceIdiomOrPhrase[] = Array.isArray(parsed.idiomsAndPhrases) && parsed.idiomsAndPhrases.length > 0
-        ? parsed.idiomsAndPhrases.map((item: any) => ({
+        ? (parsed.idiomsAndPhrases as Array<Record<string, unknown>>).map((item) => ({
             phrase: String(item.phrase || ''),
             meaning: String(item.meaning || ''),
             usageNote: item.usageNote ? String(item.usageNote) : undefined
@@ -603,13 +615,13 @@ export async function analyzeSentenceInContext(
         : generateOfflineSentenceAnalysis(cue).idiomsAndPhrases;
 
       const pronunciationTips: SentencePronunciationTip[] = Array.isArray(parsed.pronunciationTips) && parsed.pronunciationTips.length > 0
-        ? parsed.pronunciationTips.map((item: any) => ({
+        ? (parsed.pronunciationTips as Array<Record<string, unknown>>).map((item) => ({
             phenomenon: String(item.phenomenon || '地道发音技巧'),
             detail: String(item.detail || '')
           }))
         : generateOfflineSentenceAnalysis(cue).pronunciationTips;
 
-      return {
+      const analysis: SentenceDeepAnalysis = {
         sentenceEn,
         sentenceZh,
         authenticTranslation,
@@ -620,12 +632,21 @@ export async function analyzeSentenceInContext(
         source: settings.aiProvider === 'google' ? 'google' : 'grok-ai',
         isFallback: false
       };
+
+      try {
+        await setSentenceAnalysisCache(sentenceEn, analysis, targetLang);
+      } catch {
+        // Non-fatal cache persist failure
+      }
+
+      return analysis;
     } else {
       console.warn('[sentenceAnalyzer] Failed to parse valid JSON from LLM response, using offline fallback');
       return generateOfflineSentenceAnalysis(cue);
     }
-  } catch (err: any) {
-    console.warn('[sentenceAnalyzer] AI call failed, gracefully falling back:', err?.message || err);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn('[sentenceAnalyzer] AI call failed, gracefully falling back:', msg);
     return generateOfflineSentenceAnalysis(cue);
   }
 }

@@ -195,13 +195,16 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
   };
 
   const panelWidth = isSidePanelOpen ? (settings.sidePanelWidth || 420) : 0;
+  const videoLeft = videoRect ? videoRect.left : 0;
+  const videoWidth = videoRect ? videoRect.width : (typeof window !== 'undefined' ? window.innerWidth : 1280);
+  const trueVideoCenterX = videoLeft + videoWidth / 2;
 
-  // Calculate visible horizontal bounds to the left of the side panel
-  const visibleRight = videoRect
-    ? Math.min(videoRect.left + videoRect.width, window.innerWidth - panelWidth)
-    : (window.innerWidth - panelWidth);
-  const visibleLeft = videoRect ? videoRect.left : 0;
+  const visibleLeft = videoLeft;
+  const visibleRight = isSidePanelOpen
+    ? Math.min(videoLeft + videoWidth, (typeof window !== 'undefined' ? window.innerWidth : 1280) - panelWidth)
+    : (videoLeft + videoWidth);
   const visibleWidth = Math.max(280, visibleRight - visibleLeft);
+  const visibleCenterX = visibleLeft + visibleWidth / 2;
 
   // Calculate vertical position strictly inside the video area
   let finalBottom = `${bottomPercent}%`;
@@ -213,15 +216,47 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
     finalBottom = `${viewportBottomToVideoBottom + insideVideoBottomPx}px`;
   }
 
-  // Position container based on video bounds and visible area
+  // Horizontal boundaries reserving ~96px on the right for drag handle & AP toggle
+  const rightControlsReserved = isAd ? 16 : 96;
+  const rightBoundary = visibleRight - rightControlsReserved;
+  const leftBoundary = visibleLeft + 16;
+  const clearanceToRight = rightBoundary - trueVideoCenterX;
+
+  // If we have comfortable clearance (>= 160px) to the right of true video center,
+  // strictly anchor targetCenterX to trueVideoCenterX (0px deviation from video center).
+  // In extremely tight viewports, safely clamp towards visible area center without clipping.
+  let targetCenterX: number;
+  if (clearanceToRight >= 160) {
+    targetCenterX = trueVideoCenterX;
+  } else {
+    targetCenterX = Math.max(visibleCenterX - rightControlsReserved / 2, Math.min(trueVideoCenterX, rightBoundary - 140));
+  }
+
+  const maxHalfWidth = Math.max(120, Math.min(
+    targetCenterX - leftBoundary,
+    rightBoundary - targetCenterX
+  ));
+  const containerWidth = Math.min(1100, Math.max(240, Math.round(maxHalfWidth * 2)));
+  const containerLeft = Math.round(targetCenterX - containerWidth / 2);
+
+  // Position container strictly symmetrical around targetCenterX
   const containerStyle: React.CSSProperties = {
     position: 'fixed',
-    left: `${visibleLeft}px`,
-    width: `${visibleWidth}px`,
+    left: `${containerLeft}px`,
+    width: `${containerWidth}px`,
     bottom: finalBottom,
     zIndex: 99999
   };
 
+  // Right controls anchored to the visible video right edge (never occluded by side panel)
+  const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  const controlsRightPx = Math.max(16, windowWidth - visibleRight + 16);
+  const rightControlsStyle: React.CSSProperties = {
+    position: 'fixed',
+    right: `${controlsRightPx}px`,
+    bottom: finalBottom,
+    zIndex: 100000
+  };
   // Left vertical control buttons styling (Prev/Repeat/Next like LR)
   const leftControlsStyle: React.CSSProperties = videoRect ? {
     position: 'fixed',
@@ -314,12 +349,13 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
       )}
 
       {/* 2. Main Subtitle Area Container */}
+      {/* 2. Main Subtitle Area Container (Strictly centered on video) */}
       {cues && cues.length > 0 && (
-        <div style={containerStyle} className="relative flex flex-col items-center justify-center pointer-events-none select-none min-h-[48px]">
+        <div style={containerStyle} className="flex flex-col items-center justify-center pointer-events-none select-none min-h-[48px]">
           {/* 2.1 Centered Subtitle Cue Box: Strictly horizontally centered */}
           {hasActiveCue && (
-            <div className="relative group/sub flex flex-col items-center max-w-full px-20 sm:px-28 pointer-events-none">
-              <div className="relative flex items-center justify-center max-w-full pointer-events-none">
+            <div className="relative group/sub flex flex-col items-center w-full max-w-full px-2 sm:px-4 pointer-events-none">
+              <div className="relative flex items-center justify-center w-full max-w-full pointer-events-none">
                 {/* Main Subtitle Content Capsule (Optimized for sleek single-line display matching LR) */}
                 {(() => {
                   const opacity = settings.subtitleOpacity ?? 0;
@@ -331,8 +367,8 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                     WebkitBackdropFilter: isTransparent ? 'none' : `blur(${Math.round(opacity * 8)}px)`,
                     boxShadow: isTransparent ? 'none' : `0 4px 20px rgba(0, 0, 0, ${opacity * 0.4})`,
                     width: 'fit-content',
-                    minWidth: `${Math.min(280, Math.max(160, visibleWidth - 260))}px`,
-                    maxWidth: `${Math.min(1100, Math.max(220, visibleWidth - 260))}px`
+                    minWidth: `${Math.min(260, Math.max(140, containerWidth - 32))}px`,
+                    maxWidth: `${Math.min(1100, Math.max(200, containerWidth - 16))}px`
                   };
                   const activeCue = displayCue || currentCue;
                   const hasKeyPhrases = Boolean(
@@ -422,52 +458,55 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          {/* 2.2 Right-Side Controls (Drag Handle + AP Switch): Always fixed to the right side of the video area */}
-          {!isAd && (
-            <div className="absolute right-4 sm:right-6 bottom-1 flex items-center space-x-2.5 shrink-0 pointer-events-auto z-10">
-              {/* Vertical Drag Handle */}
-              <button
-                type="button"
-                onMouseDown={handleDragStart}
-                onDoubleClick={() => updateSettings({ subtitleBottomPercent: 8 })}
-                title={t.subtitleOverlay.dragTip || '拖拽调节垂直高度 (双击复位)'}
-                aria-label="拖动字幕位置"
-                className={`group/inline-drag relative shrink-0 rounded-full border border-white/20 bg-black/60 p-2 text-gray-300 shadow-lg backdrop-blur transition-all hover:border-cyan-300/70 hover:text-cyan-200 hover:opacity-100 cursor-row-resize lr-btn-shadow ${
-                  isDragging ? 'opacity-100 border-cyan-300/80 text-cyan-200 scale-105' : 'opacity-60'
-                }`}
-              >
-                <GripHorizontal size={16} />
-              </button>
+      {/* 2.2 Right-Side Controls (Drag Handle + AP Switch): Anchored to the visible right edge of the video area */}
+      {cues && cues.length > 0 && !isAd && (
+        <div
+          style={rightControlsStyle}
+          className="flex items-center space-x-2.5 shrink-0 pointer-events-auto select-none"
+        >
+          {/* Vertical Drag Handle */}
+          <button
+            type="button"
+            onMouseDown={handleDragStart}
+            onDoubleClick={() => updateSettings({ subtitleBottomPercent: 8 })}
+            title={t.subtitleOverlay.dragTip || '拖拽调节垂直高度 (双击复位)'}
+            aria-label="拖动字幕位置"
+            className={`group/inline-drag relative shrink-0 rounded-full border border-white/20 bg-black/60 p-2 text-gray-300 shadow-lg backdrop-blur transition-all hover:border-cyan-300/70 hover:text-cyan-200 hover:opacity-100 cursor-row-resize lr-btn-shadow ${
+              isDragging ? 'opacity-100 border-cyan-300/80 text-cyan-200 scale-105' : 'opacity-60'
+            }`}
+          >
+            <GripHorizontal size={16} />
+          </button>
 
-              {/* Right-Side AP (Auto-Pause) Switch (Language Reactor 1:1, hidden during ads) */}
-              <div className="flex flex-col items-center select-none shrink-0 pointer-events-auto">
-                <button
-                  type="button"
-                  onClick={() => setAutoPauseAfterSentence(!autoPauseAfterSentence)}
-                  title={autoPauseAfterSentence ? 'AP: 单句跟读暂停已开启 (点击关闭)' : 'AP: 开启单句跟读自动暂停 (点击开启)'}
-                  className={`flex flex-col items-center space-y-1 group/ap p-1 rounded-xl hover:bg-black/40 backdrop-blur-sm transition-all lr-btn-shadow ${
-                    autoPauseAfterSentence ? 'opacity-100' : 'opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <div className={`w-10 h-5 rounded-full transition-all relative flex items-center px-0.5 border ${
-                    autoPauseAfterSentence
-                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.7)]'
-                      : 'bg-[#1e1e24] border-white/20 hover:border-white/40'
-                  }`}>
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform shadow-md ${
-                      autoPauseAfterSentence ? 'translate-x-5' : 'translate-x-0'
-                    }`} />
-                  </div>
-                  <span className={`text-[11px] font-bold font-mono tracking-wider transition-colors ${
-                    autoPauseAfterSentence ? 'text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'text-gray-400 group-hover/ap:text-gray-200'
-                  }`}>
-                    AP
-                  </span>
-                </button>
+          {/* Right-Side AP (Auto-Pause) Switch (Language Reactor 1:1, hidden during ads) */}
+          <div className="flex flex-col items-center select-none shrink-0 pointer-events-auto">
+            <button
+              type="button"
+              onClick={() => setAutoPauseAfterSentence(!autoPauseAfterSentence)}
+              title={autoPauseAfterSentence ? 'AP: 单句跟读暂停已开启 (点击关闭)' : 'AP: 开启单句跟读自动暂停 (点击开启)'}
+              className={`flex flex-col items-center space-y-1 group/ap p-1 rounded-xl hover:bg-black/40 backdrop-blur-sm transition-all lr-btn-shadow ${
+                autoPauseAfterSentence ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <div className={`w-10 h-5 rounded-full transition-all relative flex items-center px-0.5 border ${
+                autoPauseAfterSentence
+                  ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.7)]'
+                  : 'bg-[#1e1e24] border-white/20 hover:border-white/40'
+              }`}>
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform shadow-md ${
+                  autoPauseAfterSentence ? 'translate-x-5' : 'translate-x-0'
+                }`} />
               </div>
-            </div>
-          )}
+              <span className={`text-[11px] font-bold font-mono tracking-wider transition-colors ${
+                autoPauseAfterSentence ? 'text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'text-gray-400 group-hover/ap:text-gray-200'
+              }`}>
+                AP
+              </span>
+            </button>
+          </div>
         </div>
       )}
 

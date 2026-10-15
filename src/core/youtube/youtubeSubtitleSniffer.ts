@@ -1,6 +1,7 @@
 import { SubtitleCue } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { VideoPlayerAdapter } from '../player/BaseAdapter';
+import type { SubtitleSniffer } from '../subtitle/snifferManager';
 import {
   isValidSubtitleText,
   decodeHtmlEntities,
@@ -70,7 +71,7 @@ export function extractYouTubeVideoId(urlStr: string): string {
  *    with Rollup ASR prefix matching, debounce, and non-overlapping turn protection.
  * 4. Ad-Aware Subtitle Display & Post-Ad Lifecycle Transition (R2 & R3).
  */
-export class YouTubeSubtitleSniffer {
+export class YouTubeSubtitleSniffer implements SubtitleSniffer {
   private player: VideoPlayerAdapter;
   private isSniffing = false;
   private domObserver: MutationObserver | null = null;

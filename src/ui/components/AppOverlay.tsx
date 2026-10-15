@@ -7,9 +7,7 @@ import { WordPopup } from './WordPopup';
 import { SentenceAnalysisCard } from './SentenceAnalysisCard';
 import { TranscriptPanel } from './TranscriptPanel';
 import { QuarkControlBar } from './QuarkControlBar';
-import { QuarkSubtitleSniffer } from '@/core/quark/quarkSubtitleSniffer';
-import { YouTubeSubtitleSniffer } from '@/core/youtube/youtubeSubtitleSniffer';
-import { BilibiliSubtitleSniffer } from '@/core/bilibili/bilibiliSubtitleSniffer';
+import { createSubtitleSniffer } from '@/core/subtitle/snifferManager';
 import { detectPageVideoTitle } from '@/core/youtube/titleSanitizer';
 import { bilingualTranslator } from '@/core/ai/bilingualTranslator';
 import { AutoPauseEngine } from '@/core/player/autoPauseEngine';
@@ -41,28 +39,34 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
     cues
   } = useAppStore();
 
-  const [videoRect, setVideoRect] = useState<{ left: number; top: number; width: number; height: number; bottom: number } | null>(null);
+  const [videoRect, setVideoRect] = useState<{ left: number; top: number; width: number; height: number; bottom: number } | null>(() => {
+    try {
+      const video = player.getVideoElement();
+      if (video) {
+        const r = video.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          return {
+            left: r.left,
+            top: r.top,
+            width: r.width,
+            height: r.height,
+            bottom: r.bottom
+          };
+        }
+      }
+    } catch {}
+    return null;
+  });
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   // Automatically start appropriate Subtitle Sniffer per website
   useEffect(() => {
     if (!settings.pluginEnabled) return;
-    let cleanup: (() => void) | null = null;
-    if (window.location.hostname.includes('quark.cn')) {
-      const sniffer = new QuarkSubtitleSniffer(player);
-      sniffer.startSniffing();
-      cleanup = () => sniffer.stopSniffing();
-    } else if (window.location.hostname.includes('youtube.com')) {
-      const sniffer = new YouTubeSubtitleSniffer(player);
-      sniffer.startSniffing();
-      cleanup = () => sniffer.stopSniffing();
-    } else if (window.location.hostname.includes('bilibili.com')) {
-      const sniffer = new BilibiliSubtitleSniffer(player);
-      sniffer.startSniffing();
-      cleanup = () => sniffer.stopSniffing();
-    }
+    const sniffer = createSubtitleSniffer(player);
+    if (!sniffer) return;
+    sniffer.startSniffing();
     return () => {
-      if (cleanup) cleanup();
+      sniffer.stopSniffing();
     };
   }, [player, settings.pluginEnabled]);
 
@@ -224,12 +228,23 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
       if (video) {
         const r = video.getBoundingClientRect();
         if (r.width > 0 && r.height > 0) {
-          setVideoRect({
-            left: r.left,
-            top: r.top,
-            width: r.width,
-            height: r.height,
-            bottom: r.bottom
+          setVideoRect(prev => {
+            if (
+              prev &&
+              Math.abs(prev.left - r.left) < 0.5 &&
+              Math.abs(prev.top - r.top) < 0.5 &&
+              Math.abs(prev.width - r.width) < 0.5 &&
+              Math.abs(prev.height - r.height) < 0.5
+            ) {
+              return prev;
+            }
+            return {
+              left: r.left,
+              top: r.top,
+              width: r.width,
+              height: r.height,
+              bottom: r.bottom
+            };
           });
         }
       }
@@ -244,16 +259,29 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
     };
 
     updateRect();
+
+    // Immediate response to container/video resizing via ResizeObserver
+    let resizeObserver: ResizeObserver | null = null;
+    const video = player.getVideoElement();
+    if (video && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(updateRect);
+      resizeObserver.observe(video);
+      if (video.parentElement) {
+        resizeObserver.observe(video.parentElement);
+      }
+    }
+
     const interval = setInterval(updateRect, 500);
     window.addEventListener('resize', updateRect);
     window.addEventListener('scroll', updateRect, true);
 
     return () => {
+      resizeObserver?.disconnect();
       clearInterval(interval);
       window.removeEventListener('resize', updateRect);
       window.removeEventListener('scroll', updateRect, true);
     };
-  }, [player, videoTitle, setVideoTitle]);
+  }, [player, videoTitle, setVideoTitle, isSidePanelOpen]);
 
   // Listen to route changes (SPA navigation across episodes) to reset video title & update rect
   useEffect(() => {

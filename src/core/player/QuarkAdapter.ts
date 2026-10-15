@@ -1,6 +1,6 @@
-import { VideoPlayerAdapter } from './BaseAdapter';
+import { BaseVideoPlayerAdapter } from './BaseAdapter';
 
-export class QuarkAdapter implements VideoPlayerAdapter {
+export class QuarkAdapter extends BaseVideoPlayerAdapter {
   name = 'QuarkPanAdapter';
 
   isMatched(): boolean {
@@ -32,101 +32,5 @@ export class QuarkAdapter implements VideoPlayerAdapter {
     }
 
     return null;
-  }
-
-  getContainer(): HTMLElement | null {
-    const video = this.getVideoElement();
-    if (!video) return null;
-
-    let parent = video.parentElement;
-    while (parent && parent !== document.body) {
-      const style = window.getComputedStyle(parent);
-      if (style.position === 'relative' || style.position === 'absolute' || style.position === 'fixed') {
-        return parent;
-      }
-      parent = parent.parentElement;
-    }
-
-    return video.parentElement || document.body;
-  }
-
-  getCurrentTime(): number {
-    const video = this.getVideoElement();
-    return video ? video.currentTime : 0;
-  }
-
-  getDuration(): number {
-    const video = this.getVideoElement();
-    return video ? video.duration : 0;
-  }
-
-  isPaused(): boolean {
-    const video = this.getVideoElement();
-    return video ? video.paused : true;
-  }
-
-  seek(seconds: number): void {
-    const video = this.getVideoElement();
-    if (video) {
-      const safeTime = Math.max(0, Math.min(seconds, video.duration || seconds));
-      video.currentTime = safeTime;
-    }
-  }
-
-  play(): void {
-    const video = this.getVideoElement();
-    if (video && video.paused) {
-      video.play().catch(() => {});
-    }
-  }
-
-  pause(): void {
-    const video = this.getVideoElement();
-    if (video && !video.paused) {
-      video.pause();
-    }
-  }
-
-  togglePlay(): void {
-    const video = this.getVideoElement();
-    if (video) {
-      if (video.paused) {
-        video.play().catch(() => {});
-      } else {
-        video.pause();
-      }
-    }
-  }
-
-  setPlaybackRate(rate: number): void {
-    const video = this.getVideoElement();
-    if (video) {
-      video.playbackRate = rate;
-    }
-  }
-
-  onTimeUpdate(callback: (currentTime: number) => void): () => void {
-    const video = this.getVideoElement();
-    if (!video) return () => {};
-
-    const handler = () => callback(video.currentTime);
-    video.addEventListener('timeupdate', handler);
-    return () => video.removeEventListener('timeupdate', handler);
-  }
-
-  onPlayStateChange(callback: (paused: boolean) => void): () => void {
-    const video = this.getVideoElement();
-    if (!video) return () => {};
-
-    const playHandler = () => callback(false);
-    const pauseHandler = () => callback(true);
-
-    video.addEventListener('play', playHandler);
-    video.addEventListener('pause', pauseHandler);
-
-    return () => {
-      video.removeEventListener('play', playHandler);
-      video.removeEventListener('pause', pauseHandler);
-    };
   }
 }
