@@ -11,8 +11,8 @@ import { WordToken } from '@/types';
 import { WordHoverTooltip } from './WordHoverTooltip';
 import { getLocale } from '@/core/i18n';
 import { isYouTubeAdPlaying } from '@/core/youtube/titleSanitizer';
-import { isCjkText } from '@/core/subtitle/parser';
-import { isEligibleForTranslation } from '@/core/ai/bilingualTranslator';
+import { isCjkText, isChineseText } from '@/core/subtitle/parser';
+import { isEligibleForTranslation, detectSourceLanguage, resolveTargetLanguage } from '@/core/ai/bilingualTranslator';
 import { mixedGlossGenerator } from '@/core/ai/mixedGlossGenerator';
 
 
@@ -193,7 +193,8 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
 
     return 'text-white hover:text-blue-300 hover:bg-blue-500/20 rounded px-0.5';
   };
-
+  const sourceLang = detectSourceLanguage(cues);
+  const { code: targetCode } = resolveTargetLanguage(sourceLang, settings.secondaryLang);
   const panelWidth = isSidePanelOpen ? (settings.sidePanelWidth || 420) : 0;
   const videoLeft = videoRect ? videoRect.left : 0;
   const videoWidth = videoRect ? videoRect.width : (typeof window !== 'undefined' ? window.innerWidth : 1280);
@@ -438,7 +439,9 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                       {/* 2. Translation Line (Concise single line, strictly controlled by settings in mixed mode) */}
                       {((!isMixedMode && (settings.subtitleMode === 'both' || settings.showChinese)) ||
                         (isMixedMode && Boolean(settings.showTranslationInMixedMode))) && (
-                        activeCue?.textZh && activeCue.textZh.trim() !== (activeCue.textEn || '').trim() ? (
+                        activeCue?.textZh &&
+                        activeCue.textZh.trim() !== (activeCue.textEn || '').trim() &&
+                        (!targetCode || targetCode.startsWith('zh') || !isChineseText(activeCue.textZh)) ? (
                           <div
                             className={`text-white mt-1 font-semibold tracking-wide lr-text-shadow leading-normal text-center whitespace-normal break-words ${
                               settings.maskChinese

@@ -5,10 +5,10 @@ import { Play, Settings, X, Search, Bookmark, Check, Star, Download, ChevronRigh
 import { useAppStore } from '@/store/useAppStore';
 import { VideoPlayerAdapter } from '@/core/player/BaseAdapter';
 import { SubtitleCue, WordToken, SavedWord } from '@/types';
-import { formatTimestamp } from '@/core/subtitle/parser';
+import { formatTimestamp, isChineseText } from '@/core/subtitle/parser';
 import { getLocale } from '@/core/i18n';
 import { sanitizeVideoTitle } from '@/core/youtube/titleSanitizer';
-import { bilingualTranslator, BatchTranslationProgress, isEligibleForTranslation, detectSourceLanguage, resolveTargetLanguage } from '@/core/ai/bilingualTranslator';
+import { bilingualTranslator, BatchTranslationProgress, isEligibleForTranslation, isCueNeedsTranslation, detectSourceLanguage, resolveTargetLanguage } from '@/core/ai/bilingualTranslator';
 
 interface TranscriptPanelProps {
   player: VideoPlayerAdapter;
@@ -224,9 +224,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
   const sourceLang = detectSourceLanguage(cues);
   const { code: targetCode } = resolveTargetLanguage(sourceLang, settings.secondaryLang);
 
-  const pendingTranslationCount = isMixedMode
-    ? cues.filter(c => Boolean(c.textEn) && isEligibleForTranslation(c.textEn, targetCode) && !isCueMixedRefined(c)).length
-    : cues.filter(c => Boolean(c.textEn) && isEligibleForTranslation(c.textEn, targetCode) && (!c.isAiRefined || !c.textZh || c.textZh.trim() === c.textEn.trim())).length;
+  const pendingTranslationCount = cues.filter(c => isCueNeedsTranslation(c, targetCode)).length;
   const activeItemRef = useRef<HTMLDivElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -862,7 +860,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
 
                     {/* Translation Line: Always show full bilingual translated sentence if available */}
                     {cue.textZh &&
-                      cue.textZh.trim() !== (cue.textEn || '').trim() && (
+                      cue.textZh.trim() !== (cue.textEn || '').trim() &&
+                      (!targetCode || targetCode.startsWith('zh') || !isChineseText(cue.textZh)) && (
                       <div
                         className="text-gray-400 leading-normal"
                         style={{ fontSize: `${Math.max(12, transcriptFontSize - 2)}px` }}

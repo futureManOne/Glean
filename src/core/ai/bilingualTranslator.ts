@@ -1,7 +1,7 @@
 import { SubtitleCue, AI_PRESETS } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { callLlmChat } from '@/core/api/llmClient';
-import { isValidSubtitleText } from '@/core/subtitle/parser';
+import { isValidSubtitleText, isChineseText, isCjkText } from '@/core/subtitle/parser';
 import { mixedGlossGenerator } from './mixedGlossGenerator';
 import { PriorityBatchQueue } from './priorityBatchQueue';
 
@@ -38,7 +38,10 @@ export function detectSourceLanguage(cuesOrText: Array<{ textEn?: string; textZh
   if (cjkChars >= 10 && englishWords === 0) {
     return 'zh';
   }
-  if (cjkChars > englishWords * 3 && cjkChars >= 15) {
+  if (cjkChars >= 15 && cjkChars >= englishWords * 0.8) {
+    return 'zh';
+  }
+  if (cjkChars > englishWords * 2) {
     return 'zh';
   }
   return 'en';
@@ -111,6 +114,40 @@ export function isEligibleForTranslation(textEn: string, targetLangCode?: string
   if (cjkChars > 0 && !hasEnglishWords) return false;
   if (cjkChars > textEn.length / 2) return false;
   return hasEnglishWords;
+}
+
+/**
+ * Check whether a cue requires AI translation or re-translation.
+ * Accurately detects missing translations, identical echoes, and language mismatch
+ * (e.g. textZh is still in Chinese when the target is English).
+ */
+export function isCueNeedsTranslation(
+  cue: SubtitleCue,
+  targetCode: string = 'zh-CN',
+  forceAll: boolean = false
+): boolean {
+  const sourceText = (cue.textEn || '').trim() || (cue.textZh || '').trim();
+  if (!sourceText || !isValidSubtitleText(sourceText)) return false;
+  if (!isEligibleForTranslation(sourceText, targetCode)) return false;
+  if (forceAll) return true;
+  if (!cue.textZh || cue.textZh.trim() === '') return true;
+  if (cue.textZh.trim() === sourceText) return true;
+
+  // Language mismatch check:
+  if (targetCode === 'en' || (targetCode && !targetCode.startsWith('zh'))) {
+    // If target is English (or non-Chinese), and textZh contains CJK without English words:
+    if ((isChineseText(cue.textZh) || isCjkText(cue.textZh)) && !/[a-zA-Z]{2,}/.test(cue.textZh)) {
+      return true;
+    }
+  } else if (targetCode && targetCode.startsWith('zh')) {
+    // If target is Chinese, and textZh has no CJK characters:
+    if (!isCjkText(cue.textZh)) {
+      return true;
+    }
+  }
+
+  if (!cue.isAiRefined) return true;
+  return false;
 }
 
 /**
@@ -473,14 +510,13 @@ Output ONLY a valid JSON object with key "translations" containing an array of o
       }
 
       if (targetCue) {
-        // Anti-echo protection: If source was Chinese and target is English, do not accept identical Chinese echo
-        const sourceIsZh = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(targetCue.textEn);
-        const outputIsZh = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(textZh);
-        if (sourceIsZh && targetCode === 'en' && outputIsZh && textZh.trim() === targetCue.textEn.trim()) {
-          console.warn('[BilingualTranslator] Skipping echoed identical Chinese text from LLM:', textZh);
+        // Anti-echo protection: If source was Chinese and target is English, do not accept Chinese output without English words
+        const sourceIsZh = isChineseText(targetCue.textEn);
+        const outputIsZh = isChineseText(textZh) || isCjkText(textZh);
+        if (sourceIsZh && targetCode === 'en' && outputIsZh && !/[a-zA-Z]{2,}/.test(textZh)) {
+          console.warn('[BilingualTranslator] Skipping invalid Chinese text returned for English translation:', textZh);
           continue;
         }
-
         results.push({ id: targetCue.id, textZh });
         if (targetCue.textEn) {
           const norm = this.normalizeKey(targetCue.textEn);
@@ -513,18 +549,8 @@ Output ONLY a valid JSON object with key "translations" containing an array of o
     const sourceLang = detectSourceLanguage(cues);
     const { code: targetCode } = resolveTargetLanguage(sourceLang, settings.secondaryLang);
 
-    // Check if any cues still lack AI-refined translation or have duplicated echo
-    const isCueNeedsTranslation = (c: SubtitleCue) => {
-      if (!c.textEn || !isEligibleForTranslation(c.textEn, targetCode)) return false;
-      if (!c.isAiRefined) return true;
-      if (!c.textZh) return true;
-      if (c.textZh.trim() === c.textEn.trim()) return true;
-      return false;
-    };
-
-    const missingCount = cues.filter(isCueNeedsTranslation).length;
+    const missingCount = cues.filter(c => isCueNeedsTranslation(c, targetCode)).length;
     if (missingCount === 0) return;
-
     // Find current or closest cue index
     let currentIdx = cues.findIndex(c => currentTime >= c.start && currentTime <= c.end);
     if (currentIdx === -1) {
@@ -540,9 +566,10 @@ Output ONLY a valid JSON object with key "translations" containing an array of o
 
     for (let i = startIdx; i < endIdx; i++) {
       const cue = cues[i];
-      if (isCueNeedsTranslation(cue)) {
+      if (isCueNeedsTranslation(cue, targetCode)) {
         // Check cache first
-        const normKey = `${targetCode}:${this.normalizeKey(cue.textEn)}`;
+        const sourceText = (cue.textEn || '').trim() || (cue.textZh || '').trim();
+        const normKey = `${targetCode}:${this.normalizeKey(sourceText)}`;
         if (this.cache.has(normKey)) {
           cachedUpdates.push({ id: cue.id, textZh: this.cache.get(normKey)! });
         } else if (!this.inFlightIds.has(cue.id)) {
@@ -550,7 +577,7 @@ Output ONLY a valid JSON object with key "translations" containing an array of o
           const now = Date.now();
           const backoffMs = failRecord ? Math.min(8000 * Math.pow(1.5, Math.min(failRecord.count - 1, 4)), 60000) : 0;
           if (!failRecord || now - failRecord.lastTime > backoffMs) {
-            candidates.push({ id: cue.id, textEn: cue.textEn });
+            candidates.push({ id: cue.id, textEn: sourceText });
           }
         }
       }
@@ -689,21 +716,9 @@ Output ONLY a valid JSON object with key "translations" containing an array of o
     const sourceLang = detectSourceLanguage(allCues);
     const { code: targetCode } = resolveTargetLanguage(sourceLang, settings.secondaryLang);
 
-    // Filter cues that lack translation, have not been AI-refined, or have duplicate echo
-    const isCueNeedsTranslation = (c: SubtitleCue) => {
-      if (!c.textEn || !isEligibleForTranslation(c.textEn, targetCode)) return false;
-      if (forceAll) return true;
-      if (!c.isAiRefined) return true;
-      if (!c.textZh) return true;
-      if (c.textZh.trim() === c.textEn.trim()) return true;
-      return false;
-    };
-
-    const eligible = allCues.filter(c => Boolean(c.textEn) && isEligibleForTranslation(c.textEn, targetCode));
     const untranslated = forceAll
-      ? eligible
-      : eligible.filter(isCueNeedsTranslation);
-
+      ? allCues.filter(c => isCueNeedsTranslation(c, targetCode, true))
+      : allCues.filter(c => isCueNeedsTranslation(c, targetCode, false));
     if (untranslated.length === 0) {
       this.batchProgress = { total: allCues.length, completed: allCues.length, percent: 100, isRunning: false, mode: 'both' };
       onProgress?.(this.batchProgress);
@@ -741,14 +756,14 @@ Output ONLY a valid JSON object with key "translations" containing an array of o
         const cachedResults: TranslationItem[] = [];
 
         for (const item of chunk) {
-          const normKey = `${targetCode}:${this.normalizeKey(item.textEn)}`;
+          const sourceText = (item.textEn || '').trim() || (item.textZh || '').trim();
+          const normKey = `${targetCode}:${this.normalizeKey(sourceText)}`;
           if (this.cache.has(normKey)) {
             cachedResults.push({ id: item.id, textZh: this.cache.get(normKey)! });
           } else {
-            toFetch.push({ id: item.id, textEn: item.textEn });
+            toFetch.push({ id: item.id, textEn: sourceText });
           }
         }
-
         if (cachedResults.length > 0) {
           useAppStore.getState().updateCueTranslations(cachedResults);
         }

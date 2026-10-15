@@ -1815,25 +1815,17 @@ export function alignBilingualJson3Events(
     const oIsChinese = isChineseText(origText);
     const tIsChinese = isChineseText(tClean);
 
-    if (tClean) {
-      if (oIsChinese && !tIsChinese) {
-        cue.textZh = origText;
-        cue.textEn = tClean;
-      } else if (oIsChinese && tIsChinese) {
-        cue.textZh = origText;
-        cue.textEn = '';
+    if (tClean && tClean !== origText) {
+      if (oIsChinese) {
+        cue.textEn = origText;
+        cue.textZh = !tIsChinese ? tClean : '';
       } else {
         cue.textEn = origText;
         cue.textZh = tClean;
       }
     } else {
-      if (oIsChinese) {
-        cue.textEn = '';
-        cue.textZh = origText;
-      } else {
-        cue.textEn = origText;
-        cue.textZh = '';
-      }
+      cue.textEn = origText;
+      cue.textZh = '';
     }
   }
 

@@ -1,7 +1,7 @@
 import { SubtitleCue, AppSettings, AI_PRESETS } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { callLlmChat } from '@/core/api/llmClient';
-import { isValidSubtitleText, segmentCuesLocally } from '@/core/subtitle/parser';
+import { isValidSubtitleText, segmentCuesLocally, isChineseText, isCjkText } from '@/core/subtitle/parser';
 
 export { segmentCuesLocally };
 
@@ -276,17 +276,24 @@ export function alignSentencesToAcousticTimestamps(
       finalEnd = maxSpeechEnd;
     }
 
-    // Preserve any existing Chinese translations associated with original cues in this range
+    // Preserve any existing translations associated with original cues in this range
     const startCueIdx = startWord.cueIndex;
     const endCueIdx = endWord.cueIndex;
     const zhParts: string[] = [];
+    const sentenceIsZh = isChineseText(sentenceText) || isCjkText(sentenceText);
+
     for (let c = startCueIdx; c <= endCueIdx && c < originalCues.length; c++) {
       const zh = (originalCues[c].textZh || '').trim();
-      if (zh && !zhParts.includes(zh)) {
+      if (!zh) continue;
+      // If the sentence is Chinese, only preserve translation if zh is in the target language (e.g. English)
+      if (sentenceIsZh && (isChineseText(zh) || (isCjkText(zh) && !/[a-zA-Z]{2,}/.test(zh)))) {
+        continue;
+      }
+      if (!zhParts.includes(zh)) {
         zhParts.push(zh);
       }
     }
-    const mergedZh = zhParts.join('');
+    const mergedZh = sentenceIsZh ? zhParts.join(' ') : zhParts.join('');
 
     alignedCues.push({
       id: alignedCues.length + 1,

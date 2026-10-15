@@ -2,8 +2,8 @@ import { SubtitleCue, WordToken, AI_PRESETS, PhraseGlossItem, MixedGlossDensity 
 import { useAppStore } from '@/store/useAppStore';
 import { callLlmChat } from '@/core/api/llmClient';
 import { normalizeWord, lookupLocalDict } from '@/core/dictionary/ecdictMini';
-import { isValidSubtitleText } from '@/core/subtitle/parser';
-import { detectSourceLanguage, type BatchTranslationProgress } from './bilingualTranslator';
+import { isValidSubtitleText, isChineseText, isCjkText } from '@/core/subtitle/parser';
+import { detectSourceLanguage, resolveTargetLanguage, isCueNeedsTranslation, type BatchTranslationProgress } from './bilingualTranslator';
 import { PriorityBatchQueue } from './priorityBatchQueue';
 
 /**
@@ -801,9 +801,16 @@ export function parseMixedTranslationResponse(
       }
     }
 
+    const targetCue = requestedCues.find(c => c.id === targetId);
+    const sourceIsZh = targetCue ? (isChineseText(targetCue.textEn) || isCjkText(targetCue.textEn)) : false;
+    let safeTextZh = textZh;
+    if (sourceIsZh && isChineseText(textZh) && !/[a-zA-Z]{2,}/.test(textZh)) {
+      safeTextZh = '';
+    }
+
     results.push({
       id: targetId,
-      textZh,
+      textZh: safeTextZh,
       phrases
     });
   }
@@ -1217,7 +1224,7 @@ CRITICAL INSTRUCTIONS:
     const defaultBaseUrl = AI_PRESETS[provider]?.apiBaseUrl || AI_PRESETS.google.apiBaseUrl;
     const defaultModel = AI_PRESETS[provider]?.modelName || AI_PRESETS.google.modelName;
 
-    const promptItems = chunk.map(c => ({ id: c.id, textEn: c.textEn }));
+    const promptItems = chunk.map(c => ({ id: c.id, textEn: (c.textEn || '').trim() || (c.textZh || '').trim() }));
     const isSourceZh = detectSourceLanguage(chunk) === 'zh';
     const density = settings.mixedGlossDensity || 'high';
     const systemPrompt = buildMixedTranslationPrompt(isSourceZh, density);
@@ -1304,16 +1311,19 @@ CRITICAL INSTRUCTIONS:
 
     const startIdx = Math.max(0, currentIdx - 1);
     const endIdx = Math.min(cues.length, currentIdx + windowRadius);
+    const settings = useAppStore.getState().settings;
+    const sourceLang = detectSourceLanguage(cues);
+    const { code: targetCode } = resolveTargetLanguage(sourceLang, settings?.secondaryLang);
 
     const candidates: SubtitleCue[] = [];
     for (let i = startIdx; i < endIdx; i++) {
       const cue = cues[i];
+      const sourceText = (cue.textEn || '').trim() || (cue.textZh || '').trim();
       if (
-        Boolean(cue.textEn) &&
-        isValidSubtitleText(cue.textEn) &&
-        !cue.isMixedRefined &&
-        cue.mixedPhrases === undefined &&
-        !this.inFlightKeys.has(this.normalizeSentenceKey(cue.textEn))
+        Boolean(sourceText) &&
+        isValidSubtitleText(sourceText) &&
+        !this.inFlightKeys.has(this.normalizeSentenceKey(sourceText)) &&
+        (!cue.isMixedRefined || isCueNeedsTranslation(cue, targetCode))
       ) {
         candidates.push(cue);
       }
@@ -1354,13 +1364,18 @@ CRITICAL INSTRUCTIONS:
 
     const allCues = cues || useAppStore.getState().cues;
     if (!allCues || allCues.length === 0) return false;
+    const settings = useAppStore.getState().settings;
+    const sourceLang = detectSourceLanguage(allCues);
+    const { code: targetCode } = resolveTargetLanguage(sourceLang, settings?.secondaryLang);
 
-    // Filter eligible cues that have English text
-    const allEligible = allCues.filter(c => Boolean(c.textEn) && isValidSubtitleText(c.textEn));
+    // Filter eligible cues
+    const allEligible = allCues.filter(c => {
+      const sourceText = (c.textEn || '').trim() || (c.textZh || '').trim();
+      return Boolean(sourceText) && isValidSubtitleText(sourceText);
+    });
     const eligibleCues = forceAll
       ? allEligible
-      : allEligible.filter(c => !c.isMixedRefined && c.mixedPhrases === undefined);
-
+      : allEligible.filter(c => !c.isMixedRefined || isCueNeedsTranslation(c, targetCode));
     if (eligibleCues.length === 0) {
       const p: BatchTranslationProgress = {
         total: allCues.length,

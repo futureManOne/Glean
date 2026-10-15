@@ -242,7 +242,7 @@ const processCuesWithWords = (rawCues: SubtitleCue[], words: SavedWord[] = INITI
 
     return {
       ...cue,
-      tokens: tokenizeSentence(cue.textEn, map)
+      tokens: tokenizeSentence(cue.textEn || cue.textZh, map)
     };
   });
 };
@@ -544,7 +544,12 @@ export const useAppStore = create<AppStoreState>((set, get) => {
           const newZh = map.get(c.id)!;
           if (c.textZh !== newZh || !c.isAiRefined) {
             changed = true;
-            return { ...c, textZh: newZh, isAiRefined: true };
+            return {
+              ...c,
+              textEn: c.textEn || c.textZh,
+              textZh: newZh,
+              isAiRefined: true
+            };
           }
         }
         return c;
@@ -575,6 +580,7 @@ export const useAppStore = create<AppStoreState>((set, get) => {
           changed = true;
           return {
             ...c,
+            textEn: c.textEn || c.textZh,
             ...(u.textZh !== undefined ? { textZh: u.textZh } : {}),
             ...(u.tokens ? { tokens: u.tokens } : {}),
             ...(u.mixedPhrases ? { mixedPhrases: u.mixedPhrases } : {}),
