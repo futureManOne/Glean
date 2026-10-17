@@ -170,28 +170,28 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
 
     // 1. High-priority Key Semantic Phrase Highlight (takes top priority to ensure unified multi-word phrase styling)
     if (token.isKeyPhrase) {
-      return 'text-amber-300 font-semibold hover:text-amber-200 hover:bg-amber-400/20 rounded px-0.5';
+      return 'text-amber-200 font-semibold bg-amber-500/20 hover:text-amber-100 hover:bg-amber-400/30 rounded px-1 py-0.5 border-b border-amber-400/40';
     }
 
-    // 2. User saved mastery levels
-    if (token.level === 'learning') return 'text-[#d8b4fe] font-semibold underline decoration-[#c084fc]/70 bg-[#a855f7]/15 rounded px-0.5'; // LR Purple
-    if (token.level === 'known') return 'text-[#86efac] font-medium bg-[#22c55e]/15 rounded px-0.5';      // Green
-    if (token.level === 'mastered') return 'text-[#93c5fd] font-medium bg-[#3b82f6]/15 rounded px-0.5';   // Blue
+    // 2. User saved mastery levels (refined pastel tones with strong contrast)
+    if (token.level === 'learning') return 'text-purple-200 font-medium underline decoration-purple-400/70 underline-offset-4 decoration-2 bg-purple-500/15 hover:bg-purple-500/25 rounded px-1 py-0.5';
+    if (token.level === 'known') return 'text-emerald-200 font-medium bg-emerald-500/15 hover:bg-emerald-500/25 rounded px-1 py-0.5';
+    if (token.level === 'mastered') return 'text-sky-200 font-medium bg-sky-500/15 hover:bg-sky-500/25 rounded px-1 py-0.5';
 
     // 3. CEFR difficulty bands for unrecognized words (if vocabulary highlighting is on)
     if (settings.highlightVocabulary && token.cefr) {
       if (token.cefr === 'C2' || token.cefr === 'C1') {
-        return 'text-[#fca5a5] hover:text-[#f87171] hover:bg-rose-500/20 rounded px-0.5 underline decoration-rose-400/50';
+        return 'text-rose-200 font-medium underline decoration-rose-400/50 underline-offset-4 bg-rose-500/15 hover:text-rose-100 hover:bg-rose-500/25 rounded px-1 py-0.5';
       }
       if (token.cefr === 'B2') {
-        return 'text-[#fde047] hover:text-[#facc15] hover:bg-amber-500/20 rounded px-0.5';
+        return 'text-amber-200 font-medium bg-amber-500/15 hover:text-amber-100 hover:bg-amber-500/25 rounded px-1 py-0.5';
       }
       if (token.cefr === 'B1') {
-        return 'text-[#93c5fd] hover:text-[#60a5fa] hover:bg-blue-500/20 rounded px-0.5';
+        return 'text-cyan-200 font-medium bg-cyan-500/15 hover:text-cyan-100 hover:bg-cyan-500/25 rounded px-1 py-0.5';
       }
     }
 
-    return 'text-white hover:text-blue-300 hover:bg-blue-500/20 rounded px-0.5';
+    return 'text-white hover:text-cyan-200 hover:bg-white/10 rounded px-0.5';
   };
   const sourceLang = detectSourceLanguage(cues);
   const { code: targetCode } = resolveTargetLanguage(sourceLang, settings.secondaryLang);
@@ -315,37 +315,58 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
       {cues.length > 0 && !isAd && (
         <div
           style={leftControlsStyle}
-          className="flex flex-col items-center space-y-2 select-none group/left transition-opacity duration-200"
+          className="flex flex-col items-center space-y-2.5 select-none group/left transition-opacity duration-200"
         >
           {/* Prev Cue (∧ / A) */}
-          <button
-            type="button"
-            onClick={() => prevCue(player)}
-            title="跳转上一句 (快捷键 A)"
-            className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md border border-white/15 flex items-center justify-center text-gray-200 hover:text-white shadow-xl hover:scale-110 active:scale-95 transition-all lr-btn-shadow"
-          >
-            <ChevronUp size={22} strokeWidth={2.5} />
-          </button>
+          <div className="relative group/nav-btn flex items-center">
+            <button
+              type="button"
+              onClick={() => prevCue(player)}
+              title={settings.uiLanguage === 'zh-CN' ? '跳转上一句 (快捷键 A)' : settings.uiLanguage === 'ja' ? '前の字幕へ (ショートカット A)' : 'Previous Cue (Hotkey A)'}
+              aria-label="Previous Cue"
+              className="w-10 h-10 rounded-full bg-black/65 hover:bg-[#161b22] backdrop-blur-md border border-white/15 hover:border-cyan-400/50 flex items-center justify-center text-gray-200 hover:text-cyan-200 shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 lr-btn-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            >
+              <ChevronUp size={20} strokeWidth={2.2} />
+            </button>
+            <div className="absolute left-full ml-2.5 px-2.5 py-1 rounded-md bg-[#0e1117]/95 border border-white/15 text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/nav-btn:opacity-100 pointer-events-none transition-all duration-150 transform translate-x-1 group-hover/nav-btn:translate-x-0 shadow-2xl backdrop-blur-md z-50 flex items-center gap-1.5">
+              <span>{settings.uiLanguage === 'zh-CN' ? '上一句' : settings.uiLanguage === 'ja' ? '前へ' : 'Prev'}</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/15 text-[10px] font-mono font-semibold text-cyan-300">A</kbd>
+            </div>
+          </div>
 
           {/* Repeat Current Cue (↻ / S) */}
-          <button
-            type="button"
-            onClick={() => repeatCurrentCue(player)}
-            title="重播当前句 (快捷键 S)"
-            className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md border border-white/15 flex items-center justify-center text-gray-200 hover:text-white shadow-xl hover:scale-110 active:scale-95 transition-all lr-btn-shadow"
-          >
-            <RotateCcw size={18} strokeWidth={2.2} />
-          </button>
+          <div className="relative group/nav-btn flex items-center">
+            <button
+              type="button"
+              onClick={() => repeatCurrentCue(player)}
+              title={settings.uiLanguage === 'zh-CN' ? '重播当前句 (快捷键 S)' : settings.uiLanguage === 'ja' ? '現在の字幕をリピート (ショートカット S)' : 'Repeat Current Cue (Hotkey S)'}
+              aria-label="Repeat Current Cue"
+              className="w-10 h-10 rounded-full bg-black/65 hover:bg-[#161b22] backdrop-blur-md border border-white/15 hover:border-cyan-400/50 flex items-center justify-center text-gray-200 hover:text-cyan-200 shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 lr-btn-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            >
+              <RotateCcw size={17} strokeWidth={2.2} />
+            </button>
+            <div className="absolute left-full ml-2.5 px-2.5 py-1 rounded-md bg-[#0e1117]/95 border border-white/15 text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/nav-btn:opacity-100 pointer-events-none transition-all duration-150 transform translate-x-1 group-hover/nav-btn:translate-x-0 shadow-2xl backdrop-blur-md z-50 flex items-center gap-1.5">
+              <span>{settings.uiLanguage === 'zh-CN' ? '重播当前句' : settings.uiLanguage === 'ja' ? 'リピート' : 'Repeat'}</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/15 text-[10px] font-mono font-semibold text-cyan-300">S</kbd>
+            </div>
+          </div>
 
           {/* Next Cue (∨ / D) */}
-          <button
-            type="button"
-            onClick={() => nextCue(player)}
-            title="跳转下一句 (快捷键 D)"
-            className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md border border-white/15 flex items-center justify-center text-gray-200 hover:text-white shadow-xl hover:scale-110 active:scale-95 transition-all lr-btn-shadow"
-          >
-            <ChevronDown size={22} strokeWidth={2.5} />
-          </button>
+          <div className="relative group/nav-btn flex items-center">
+            <button
+              type="button"
+              onClick={() => nextCue(player)}
+              title={settings.uiLanguage === 'zh-CN' ? '跳转下一句 (快捷键 D)' : settings.uiLanguage === 'ja' ? '次の字幕へ (ショートカット D)' : 'Next Cue (Hotkey D)'}
+              aria-label="Next Cue"
+              className="w-10 h-10 rounded-full bg-black/65 hover:bg-[#161b22] backdrop-blur-md border border-white/15 hover:border-cyan-400/50 flex items-center justify-center text-gray-200 hover:text-cyan-200 shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 lr-btn-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            >
+              <ChevronDown size={20} strokeWidth={2.2} />
+            </button>
+            <div className="absolute left-full ml-2.5 px-2.5 py-1 rounded-md bg-[#0e1117]/95 border border-white/15 text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/nav-btn:opacity-100 pointer-events-none transition-all duration-150 transform translate-x-1 group-hover/nav-btn:translate-x-0 shadow-2xl backdrop-blur-md z-50 flex items-center gap-1.5">
+              <span>{settings.uiLanguage === 'zh-CN' ? '下一句' : settings.uiLanguage === 'ja' ? '次へ' : 'Next'}</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/15 text-[10px] font-mono font-semibold text-cyan-300">D</kbd>
+            </div>
+          </div>
         </div>
       )}
 
@@ -362,11 +383,11 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                   const opacity = settings.subtitleOpacity ?? 0;
                   const isTransparent = opacity === 0;
                   const capsuleStyle: React.CSSProperties = {
-                    backgroundColor: isTransparent ? 'transparent' : `rgba(18, 18, 22, ${opacity})`,
-                    borderColor: isTransparent ? 'transparent' : `rgba(255, 255, 255, ${Math.min(0.15, opacity * 0.15)})`,
-                    backdropFilter: isTransparent ? 'none' : `blur(${Math.round(opacity * 8)}px)`,
-                    WebkitBackdropFilter: isTransparent ? 'none' : `blur(${Math.round(opacity * 8)}px)`,
-                    boxShadow: isTransparent ? 'none' : `0 4px 20px rgba(0, 0, 0, ${opacity * 0.4})`,
+                    backgroundColor: isTransparent ? 'transparent' : `rgba(0, 0, 0, ${opacity})`,
+                    borderColor: isTransparent ? 'transparent' : `rgba(255, 255, 255, ${Math.min(0.2, Math.max(0.1, opacity * 0.18))})`,
+                    backdropFilter: isTransparent ? 'none' : `blur(${Math.max(8, Math.round(opacity * 16))}px)`,
+                    WebkitBackdropFilter: isTransparent ? 'none' : `blur(${Math.max(8, Math.round(opacity * 16))}px)`,
+                    boxShadow: isTransparent ? 'none' : `0 8px 32px rgba(0, 0, 0, ${opacity * 0.5})`,
                     width: 'fit-content',
                     minWidth: `${Math.min(260, Math.max(140, containerWidth - 32))}px`,
                     maxWidth: `${Math.min(1100, Math.max(200, containerWidth - 16))}px`
@@ -375,35 +396,33 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                   const hasKeyPhrases = Boolean(
                     activeCue?.tokens?.some(t => t.isKeyPhrase)
                   );
-                  const hasAnyInlineGlosses = Boolean(
-                    activeCue?.tokens?.some(t =>
-                      (t.phraseMeaning && t.isPhraseEnd) ||
-                      (!hasKeyPhrases && !t.phraseId && t.contextMeaning)
-                    )
-                  );
 
                   return (
                     <div
-                      className="relative pointer-events-auto text-center lr-pill-bg px-6 sm:px-8 py-2.5 sm:py-3 rounded-2xl shadow-2xl transition-all duration-150"
+                      className={`relative pointer-events-auto text-center lr-pill-bg px-6 sm:px-8 py-2.5 sm:py-3.5 rounded-2xl transition-all duration-200 ease-out ${
+                        isTransparent
+                          ? '!bg-transparent !border-transparent !backdrop-blur-none !shadow-none'
+                          : 'backdrop-blur-md bg-black/65 border border-white/15 shadow-2xl'
+                      }`}
                       style={capsuleStyle}
                     >
                       {/* 1. English Sentence Line (Concise single line matching LR 1:1, or Mixed Mode) */}
                       {(settings.showEnglish || isMixedMode) && activeCue && activeCue.textEn && (
                         <div
-                          className={`font-bold tracking-wide text-center leading-normal lr-text-shadow text-white whitespace-normal break-words ${
+                          className={`font-semibold tracking-wide text-center leading-relaxed lr-text-shadow text-white whitespace-normal break-words selection:bg-cyan-500/30 ${
                             settings.maskEnglish
                               ? 'filter blur-[5px] hover:blur-none transition-all duration-200 cursor-pointer select-none hover:select-text'
                               : ''
                           }`}
                           style={{ fontSize: `${settings.subtitleFontSize}px` }}
-                          title={settings.maskEnglish ? '听力遮罩已开启，鼠标悬停显示英文' : undefined}
+                          title={settings.maskEnglish ? (settings.uiLanguage === 'zh-CN' ? '听力遮罩已开启，鼠标悬停显示英文' : 'Listening mask active, hover to show text') : undefined}
                         >
                           {activeCue.tokens && activeCue.tokens.length > 0 ? (
                             activeCue.tokens.map((token) => {
                               const isCjk = isCjkText(token.text);
                               const tokenSpacing = isCjk
                                 ? (token.isKeyPhrase ? (token.isPhraseStart ? 'ml-0.5' : '') : 'mx-0 px-0')
-                                : 'inline-block mx-0.5 px-0.5';
+                                : 'inline-block mx-0.5';
 
                               return token.isWord ? (
                                 <span
@@ -411,15 +430,15 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                                   onClick={(e) => handleWordClick(e, token)}
                                   onMouseEnter={(e) => handleWordMouseEnter(e, token)}
                                   onMouseLeave={handleWordMouseLeave}
-                                  className={`token-word ${token.isKeyPhrase ? 'inline-block' : (isCjk ? 'inline' : 'inline-block')} ${tokenSpacing} rounded transition-transform cursor-pointer hover:scale-105 active:scale-95 group/token ${getTokenColorClass(token)}`}
+                                  className={`token-word ${token.isKeyPhrase ? 'inline-block' : (isCjk ? 'inline' : 'inline-block')} ${tokenSpacing} rounded transition-all duration-150 cursor-pointer hover:scale-105 active:scale-95 group/token ${getTokenColorClass(token)}`}
                                 >
                                   <span>{token.text}</span>
                                   {isMixedMode && (token.phraseMeaning && token.isPhraseEnd ? (
-                                    <span className="ml-1 mr-0.5 text-[0.82em] font-medium text-emerald-300/90 group-hover/token:text-emerald-200 select-none">
+                                    <span className="ml-1 mr-0.5 text-[0.82em] font-medium text-emerald-300 group-hover/token:text-emerald-200 select-none">
                                       ({token.phraseMeaning})
                                     </span>
                                   ) : (!hasKeyPhrases && !token.phraseId && token.contextMeaning ? (
-                                    <span className="ml-1 mr-0.5 text-[0.82em] font-medium text-emerald-300/90 group-hover/token:text-emerald-200 select-none">
+                                    <span className="ml-1 mr-0.5 text-[0.82em] font-medium text-emerald-300 group-hover/token:text-emerald-200 select-none">
                                       ({token.contextMeaning})
                                     </span>
                                   ) : null))}
@@ -443,13 +462,13 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
                         activeCue.textZh.trim() !== (activeCue.textEn || '').trim() &&
                         (!targetCode || targetCode.startsWith('zh') || !isChineseText(activeCue.textZh)) ? (
                           <div
-                            className={`text-white mt-1 font-semibold tracking-wide lr-text-shadow leading-normal text-center whitespace-normal break-words ${
+                            className={`text-gray-200/95 mt-1.5 font-medium tracking-wide lr-text-shadow leading-relaxed text-center whitespace-normal break-words selection:bg-cyan-500/30 ${
                               settings.maskChinese
                                 ? 'filter blur-[5px] hover:blur-none transition-all duration-200 cursor-pointer select-none hover:select-text'
                                 : ''
                             }`}
-                            style={{ fontSize: `${Math.max(14, Math.round(settings.subtitleFontSize * 0.86))}px`, textShadow: '0 0 7px rgba(0,0,0,.98), 0 0 16px rgba(0,0,0,.8)' }}
-                            title={settings.maskChinese ? '听力盲听遮罩已开启，鼠标悬停显示中文释义' : undefined}
+                            style={{ fontSize: `${Math.max(14, Math.round(settings.subtitleFontSize * 0.86))}px` }}
+                            title={settings.maskChinese ? (settings.uiLanguage === 'zh-CN' ? '听力盲听遮罩已开启，鼠标悬停显示中文释义' : 'Listening mask active, hover to show translation') : undefined}
                           >
                             {activeCue.textZh}
                           </div>
@@ -471,44 +490,83 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
           className="flex items-center space-x-2.5 shrink-0 pointer-events-auto select-none"
         >
           {/* Vertical Drag Handle */}
-          <button
-            type="button"
-            onMouseDown={handleDragStart}
-            onDoubleClick={() => updateSettings({ subtitleBottomPercent: 8 })}
-            title={t.subtitleOverlay.dragTip || '拖拽调节垂直高度 (双击复位)'}
-            aria-label="拖动字幕位置"
-            className={`group/inline-drag relative shrink-0 rounded-full border border-white/20 bg-black/60 p-2 text-gray-300 shadow-lg backdrop-blur transition-all hover:border-cyan-300/70 hover:text-cyan-200 hover:opacity-100 cursor-row-resize lr-btn-shadow ${
-              isDragging ? 'opacity-100 border-cyan-300/80 text-cyan-200 scale-105' : 'opacity-60'
-            }`}
-          >
-            <GripHorizontal size={16} />
-          </button>
+          <div className="relative group/drag shrink-0 flex items-center">
+            <button
+              type="button"
+              onMouseDown={handleDragStart}
+              onDoubleClick={() => updateSettings({ subtitleBottomPercent: 8 })}
+              title={t.subtitleOverlay.dragTip || '拖拽调节垂直高度 (双击复位)'}
+              aria-label="拖动字幕位置"
+              className={`relative shrink-0 rounded-xl border border-white/15 bg-black/65 hover:bg-[#161b22] px-2 py-2 text-gray-300 shadow-xl backdrop-blur-md transition-all duration-200 hover:border-cyan-400/50 hover:text-cyan-200 cursor-row-resize active:cursor-grabbing lr-btn-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 ${
+                isDragging ? 'opacity-100 border-cyan-400 text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.35)] scale-105' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              <GripHorizontal size={18} className="transition-transform group-hover/drag:scale-110" />
+            </button>
+            {/* Double-click reset tooltip */}
+            <div className="absolute right-0 bottom-full mb-2.5 px-3 py-1.5 rounded-lg bg-[#0e1117]/95 border border-white/15 text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/drag:opacity-100 pointer-events-none transition-all duration-150 transform translate-y-1 group-hover/drag:translate-y-0 shadow-2xl backdrop-blur-md z-50 flex flex-col gap-0.5 text-left">
+              <span className="font-semibold text-white flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block animate-pulse" />
+                {t.subtitleOverlay.dragTip || '拖拽调节垂直高度'}
+              </span>
+              <span className="text-[10px] text-gray-400">
+                {settings.uiLanguage === 'zh-CN' ? '双击复位到默认位置 (8%)' : settings.uiLanguage === 'ja' ? 'ダブルクリックで初期位置に戻す (8%)' : 'Double-click to reset (8%)'}
+              </span>
+            </div>
+          </div>
 
-          {/* Right-Side AP (Auto-Pause) Switch (Language Reactor 1:1, hidden during ads) */}
-          <div className="flex flex-col items-center select-none shrink-0 pointer-events-auto">
+          {/* Right-Side AP (Auto-Pause) Switch */}
+          <div className="relative group/ap flex flex-col items-center select-none shrink-0 pointer-events-auto">
             <button
               type="button"
               onClick={() => setAutoPauseAfterSentence(!autoPauseAfterSentence)}
               title={autoPauseAfterSentence ? 'AP: 单句跟读暂停已开启 (点击关闭)' : 'AP: 开启单句跟读自动暂停 (点击开启)'}
-              className={`flex flex-col items-center space-y-1 group/ap p-1 rounded-xl hover:bg-black/40 backdrop-blur-sm transition-all lr-btn-shadow ${
-                autoPauseAfterSentence ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+              aria-label="Auto Pause"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border backdrop-blur-md transition-all duration-200 lr-btn-shadow active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${
+                autoPauseAfterSentence
+                  ? 'bg-emerald-950/40 border-emerald-500/40 hover:border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]'
+                  : 'bg-black/65 border-white/15 hover:border-white/30 text-gray-400 hover:text-gray-200 opacity-75 hover:opacity-100'
               }`}
             >
-              <div className={`w-10 h-5 rounded-full transition-all relative flex items-center px-0.5 border ${
+              {/* Sleek Pill Track */}
+              <div className={`w-8 h-4 rounded-full transition-all duration-200 relative flex items-center px-0.5 border ${
                 autoPauseAfterSentence
-                  ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.7)]'
-                  : 'bg-[#1e1e24] border-white/20 hover:border-white/40'
+                  ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.7)]'
+                  : 'bg-[#1b212c] border-white/20 group-hover/ap:border-white/30'
               }`}>
-                <div className={`w-4 h-4 rounded-full bg-white transition-transform shadow-md ${
-                  autoPauseAfterSentence ? 'translate-x-5' : 'translate-x-0'
+                <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 ease-out shadow-sm ${
+                  autoPauseAfterSentence ? 'translate-x-4 shadow-[0_0_6px_rgba(255,255,255,0.9)]' : 'translate-x-0'
                 }`} />
               </div>
-              <span className={`text-[11px] font-bold font-mono tracking-wider transition-colors ${
-                autoPauseAfterSentence ? 'text-emerald-400 drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'text-gray-400 group-hover/ap:text-gray-200'
-              }`}>
-                AP
-              </span>
+              {/* Indicator & Label */}
+              <div className="flex items-center gap-1">
+                <span className={`text-[11px] font-bold font-mono tracking-wider transition-colors duration-200 ${
+                  autoPauseAfterSentence
+                    ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]'
+                    : 'text-gray-400 group-hover/ap:text-gray-200'
+                }`}>
+                  AP
+                </span>
+                {autoPauseAfterSentence && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981] animate-pulse" />
+                )}
+              </div>
             </button>
+
+            {/* Glowing Emerald Tooltip */}
+            <div className="absolute right-0 bottom-full mb-2.5 px-3 py-1.5 rounded-lg bg-[#0e1117]/95 border border-white/15 text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover/ap:opacity-100 pointer-events-none transition-all duration-150 transform translate-y-1 group-hover/ap:translate-y-0 shadow-2xl backdrop-blur-md z-50 flex flex-col gap-0.5 text-left">
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${autoPauseAfterSentence ? 'bg-emerald-400 shadow-[0_0_6px_#10b981]' : 'bg-gray-500'}`} />
+                <span className="font-semibold text-white">
+                  {autoPauseAfterSentence
+                    ? (settings.uiLanguage === 'zh-CN' ? '单句跟读暂停：已开启' : settings.uiLanguage === 'ja' ? '自動一時停止：有効' : 'Auto-Pause: Active')
+                    : (settings.uiLanguage === 'zh-CN' ? '单句跟读暂停：已关闭' : settings.uiLanguage === 'ja' ? '自動一時停止：無効' : 'Auto-Pause: Inactive')}
+                </span>
+              </div>
+              <span className="text-[10px] text-gray-400">
+                {settings.uiLanguage === 'zh-CN' ? '单句播放完成后自动暂停，方便跟读跟练' : settings.uiLanguage === 'ja' ? '各文の再生終了後に自動で一時停止します' : 'Auto-pause after each cue for shadow-reading'}
+              </span>
+            </div>
           </div>
         </div>
       )}

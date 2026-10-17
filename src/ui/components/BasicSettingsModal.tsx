@@ -48,14 +48,14 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
   })[density];
 
   return (
-    <div className="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-in fade-in duration-200">
       <section
         ref={dialogRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="lr-basic-settings-title"
-        className="w-[680px] max-w-full max-h-[90vh] overflow-y-auto rounded-xl border border-white/15 bg-[#15191d] text-gray-100 shadow-[0_24px_80px_rgba(0,0,0,.55)] font-sans"
+        className="w-[720px] max-w-full max-h-[90vh] overflow-y-auto rounded-2xl border border-white/15 bg-[#121620]/98 text-gray-100 shadow-[0_30px_90px_rgba(0,0,0,0.85),0_0_1px_1px_rgba(255,255,255,0.1)] font-sans ring-1 ring-black/50"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           event.stopPropagation();
@@ -69,17 +69,22 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
           }
         }}
       >
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#15191d]/95 px-5 py-4 backdrop-blur">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400/15 text-cyan-300">
-              <Settings size={17} />
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 bg-[#121620]/95 px-6 py-4 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-300 border border-cyan-400/25 shadow-[0_0_12px_rgba(6,182,212,0.15)]">
+              <Settings size={18} />
             </span>
             <div>
-              <h2 id="lr-basic-settings-title" className="text-sm font-semibold text-white">{t.settingsModal.title}</h2>
-              <p className="text-[11px] text-gray-400">{t.appSubtitle}</p>
+              <h2 id="lr-basic-settings-title" className="text-sm font-bold text-white tracking-tight">{t.settingsModal.title}</h2>
+              <p className="text-[11px] text-gray-400 font-sans">{t.appSubtitle}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white" title="关闭设置">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-2 text-gray-400 transition-all hover:bg-white/10 hover:text-white active:scale-95"
+            title="关闭设置"
+          >
             <X size={18} />
           </button>
         </header>
@@ -88,22 +93,37 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
           {children}
           <AiSettingsPanel />
           <AudioSettingsSection />
+
+          {/* UI Language Segmented Control */}
           <div>
-            <label className="mb-2 block text-[11px] font-medium text-gray-400">{t.uiLanguage}</label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['zh-CN', 'en', 'ja'] as SupportedLang[]).map((lang) => (
-                <button key={lang} type="button" onClick={() => updateSettings({ uiLanguage: lang })} className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${(settings.uiLanguage || 'zh-CN') === lang ? 'border-cyan-300/60 bg-cyan-300/15 text-cyan-200' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.07] hover:text-gray-200'}`}>
-                  {t.lang[lang]}
-                </button>
-              ))}
+            <label className="mb-2 block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{t.uiLanguage}</label>
+            <div className="grid grid-cols-3 gap-1.5 bg-[#0b0e14] p-1.5 rounded-xl border border-white/10">
+              {(['zh-CN', 'en', 'ja'] as SupportedLang[]).map((lang) => {
+                const isActive = (settings.uiLanguage || 'zh-CN') === lang;
+                return (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => updateSettings({ uiLanguage: lang })}
+                    className={`rounded-lg py-2 px-3 text-xs font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/50 text-cyan-200 font-semibold shadow-sm'
+                        : 'border border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]' : 'bg-transparent'}`} />
+                    <span>{t.lang[lang]}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* AI 翻译目标语言选择 */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-[11px] font-medium text-gray-400">{t.settingsModal.aiTranslationLang}</label>
-              <span className="text-[11px] text-cyan-300">
+              <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{t.settingsModal.aiTranslationLang}</label>
+              <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/60 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
                 {SUPPORTED_TRANSLATION_LANGUAGES.find(l => l.code === (settings.secondaryLang || 'auto'))?.name || settings.secondaryLang}
               </span>
             </div>
@@ -111,59 +131,85 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
               aria-label={t.settingsModal.aiTranslationLang}
               value={settings.secondaryLang || 'auto'}
               onChange={(e) => updateSettings({ secondaryLang: e.target.value })}
-              className="w-full rounded-lg border border-white/15 bg-[#101418] px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+              className="w-full rounded-xl border border-white/15 bg-[#0b0e14] px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all cursor-pointer"
             >
               {SUPPORTED_TRANSLATION_LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code}>
+                <option key={lang.code} value={lang.code} className="bg-[#121620] text-white">
                   {settings.uiLanguage === 'en' ? lang.englishName : lang.name}
                 </option>
               ))}
             </select>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-gray-500">
+            <p className="mt-1.5 text-[11px] leading-relaxed text-gray-400">
               {t.settingsModal.aiTranslationLangDesc}
             </p>
           </div>
 
+          {/* Subtitle Mode Segmented Control */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-            <label className="text-[11px] font-medium text-gray-400">{t.settingsModal.defaultSubtitleMode}</label>
-              <span className="text-[11px] text-cyan-300">{subtitleModeLabel(settings.subtitleMode)}</span>
+              <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{t.settingsModal.defaultSubtitleMode}</label>
+              <span className="text-[11px] font-medium text-cyan-300 bg-cyan-950/60 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                {subtitleModeLabel(settings.subtitleMode)}
+              </span>
             </div>
-            <div className="grid grid-cols-5 gap-1.5">
-              {(['both', 'mixed', 'target', 'translation', 'hidden'] as SubtitleMode[]).map((mode) => (
-                <button key={mode} type="button" onClick={() => setSubtitleMode(mode)} className={`rounded-lg border px-1.5 py-2 text-[11px] font-medium transition-colors ${settings.subtitleMode === mode ? 'border-cyan-300/60 bg-cyan-300/15 text-cyan-200' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.07]'}`}>
-                  {subtitleModeLabel(mode)}
-                </button>
-              ))}
+            <div className="grid grid-cols-5 gap-1.5 bg-[#0b0e14] p-1.5 rounded-xl border border-white/10">
+              {(['both', 'mixed', 'target', 'translation', 'hidden'] as SubtitleMode[]).map((mode) => {
+                const isActive = settings.subtitleMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setSubtitleMode(mode)}
+                    className={`rounded-lg py-2 px-1 text-[11px] font-medium transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/50 text-cyan-200 font-semibold shadow-sm'
+                        : 'border border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]' : 'bg-transparent'}`} />
+                    <span className="truncate">{subtitleModeLabel(mode)}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* AI 精翻覆盖密度调节 */}
+          {/* AI 精翻覆盖密度调节 Segmented Control */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-[11px] font-medium text-gray-400">{t.settingsModal.mixedGlossDensity}</label>
-              <span className="text-[11px] text-cyan-300">{densityLabel(settings.mixedGlossDensity || 'high')}</span>
+              <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{t.settingsModal.mixedGlossDensity}</label>
+              <span className="text-[11px] font-medium text-cyan-300 bg-cyan-950/60 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                {densityLabel(settings.mixedGlossDensity || 'high')}
+              </span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {(['low', 'medium', 'high'] as MixedGlossDensity[]).map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  onClick={() => updateSettings({ mixedGlossDensity: level })}
-                  className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${(settings.mixedGlossDensity || 'high') === level ? 'border-cyan-300/60 bg-cyan-300/15 text-cyan-200' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.07] hover:text-gray-200'}`}
-                >
-                  {densityLabel(level)}
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-1.5 bg-[#0b0e14] p-1.5 rounded-xl border border-white/10">
+              {(['low', 'medium', 'high'] as MixedGlossDensity[]).map((level) => {
+                const isActive = (settings.mixedGlossDensity || 'high') === level;
+                return (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => updateSettings({ mixedGlossDensity: level })}
+                    className={`rounded-lg py-2 px-3 text-xs font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/50 text-cyan-200 font-semibold shadow-sm'
+                        : 'border border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]' : 'bg-transparent'}`} />
+                    <span>{densityLabel(level)}</span>
+                  </button>
+                );
+              })}
             </div>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-gray-500">
+            <p className="mt-1.5 text-[11px] leading-relaxed text-gray-400">
               {t.settingsModal.mixedGlossDensityDesc}
             </p>
           </div>
 
           {/* 中英混合模式整句中文翻译开关 */}
           {settings.subtitleMode === 'mixed' && (
-            <label className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-950/20 p-3.5 transition-all">
+            <label className="flex items-center justify-between rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-3.5 transition-all cursor-pointer hover:bg-cyan-950/30">
               <div className="pr-4">
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-cyan-200">
                   <span>{t.settingsModal.mixedModeShowTranslation}</span>
@@ -181,31 +227,133 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
             </label>
           )}
 
+          {/* Range Sliders for Font Sizes */}
           <div className="grid grid-cols-2 gap-4">
-            <label className="space-y-2">
-              <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.subtitleFontSize}</span><b className="font-mono text-cyan-300">{settings.subtitleFontSize || 23}px</b></span>
-              <input type="range" min="14" max="36" value={settings.subtitleFontSize || 23} onChange={(event) => updateSettings({ subtitleFontSize: Number(event.target.value) })} className="w-full accent-cyan-400" />
-            </label>
-            <label className="space-y-2">
-              <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.transcriptFontSize}</span><b className="font-mono text-cyan-300">{settings.transcriptFontSize || 15}px</b></span>
-              <input type="range" min="12" max="24" value={settings.transcriptFontSize || 15} onChange={(event) => updateSettings({ transcriptFontSize: Number(event.target.value) })} className="w-full accent-cyan-400" />
-            </label>
+            <div className="bg-[#0b0e14] p-3.5 rounded-xl border border-white/10 space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-300 font-medium">{t.settingsModal.subtitleFontSize}</span>
+                <span className="px-2 py-0.5 rounded-full font-mono text-xs font-bold bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 shadow-sm">
+                  {settings.subtitleFontSize || 23}px
+                </span>
+              </div>
+              <input
+                type="range"
+                min="14"
+                max="36"
+                value={settings.subtitleFontSize || 23}
+                onChange={(event) => updateSettings({ subtitleFontSize: Number(event.target.value) })}
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
+              />
+              <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                <span>14px</span>
+                <span>23px (默认)</span>
+                <span>36px</span>
+              </div>
+            </div>
+
+            <div className="bg-[#0b0e14] p-3.5 rounded-xl border border-white/10 space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-300 font-medium">{t.settingsModal.transcriptFontSize}</span>
+                <span className="px-2 py-0.5 rounded-full font-mono text-xs font-bold bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 shadow-sm">
+                  {settings.transcriptFontSize || 15}px
+                </span>
+              </div>
+              <input
+                type="range"
+                min="12"
+                max="24"
+                value={settings.transcriptFontSize || 15}
+                onChange={(event) => updateSettings({ transcriptFontSize: Number(event.target.value) })}
+                className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
+              />
+              <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                <span>12px</span>
+                <span>15px (默认)</span>
+                <span>24px</span>
+              </div>
+            </div>
           </div>
 
-          <label className="block space-y-2">
-            <span className="flex items-center justify-between text-[11px] text-gray-400"><span>{t.settingsModal.subtitleOpacity}</span><b className="font-mono text-cyan-300">{Math.round((settings.subtitleOpacity ?? 0) * 100)}%</b></span>
-            <input aria-label="字幕背景不透明度" type="range" min="0" max="100" step="5" value={Math.round((settings.subtitleOpacity ?? 0) * 100)} onChange={(event) => updateSettings({ subtitleOpacity: Number(event.target.value) / 100 })} className="w-full accent-cyan-400" />
-            <button type="button" onClick={() => updateSettings({ subtitleOpacity: 0 })} className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-cyan-200 hover:bg-white/10">{settings.uiLanguage === 'en' ? '0% (Text only)' : settings.uiLanguage === 'ja' ? '0%（文字のみ）' : '全透明（仅文字）'}</button>
+          {/* Subtitle Background Opacity */}
+          <div className="bg-[#0b0e14] p-3.5 rounded-xl border border-white/10 space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-300 font-medium">{t.settingsModal.subtitleOpacity}</span>
+              <span className="px-2 py-0.5 rounded-full font-mono text-xs font-bold bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 shadow-sm">
+                {Math.round((settings.subtitleOpacity ?? 0) * 100)}%
+              </span>
+            </div>
+            <input
+              aria-label="字幕背景不透明度"
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={Math.round((settings.subtitleOpacity ?? 0) * 100)}
+              onChange={(event) => updateSettings({ subtitleOpacity: Number(event.target.value) / 100 })}
+              className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
+            />
+            <div className="flex items-center justify-between pt-0.5">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateSettings({ subtitleOpacity: 0 })}
+                  className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
+                    (settings.subtitleOpacity ?? 0) === 0
+                      ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-300 font-medium'
+                      : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
+                  }`}
+                >
+                  0% {settings.uiLanguage === 'en' ? '(Text only)' : settings.uiLanguage === 'ja' ? '（文字のみ）' : '（仅文字）'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateSettings({ subtitleOpacity: 0.5 })}
+                  className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
+                    Math.round((settings.subtitleOpacity ?? 0) * 100) === 50
+                      ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-300 font-medium'
+                      : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
+                  }`}
+                >
+                  50%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateSettings({ subtitleOpacity: 0.8 })}
+                  className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
+                    Math.round((settings.subtitleOpacity ?? 0) * 100) === 80
+                      ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-300 font-medium'
+                      : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
+                  }`}
+                >
+                  80%
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mask Chinese Mode */}
+          <label className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0b0e14] p-3.5 hover:border-white/20 transition-colors cursor-pointer">
+            <span>
+              <span className="block text-xs font-semibold text-gray-200">{t.settingsModal.maskModeLabel}</span>
+              <span className="mt-0.5 block text-[11px] text-gray-400">{t.settingsModal.maskModeDesc}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={!!settings.maskChinese}
+              onChange={(event) => updateSettings({ maskChinese: event.target.checked })}
+              className="h-4 w-4 rounded accent-cyan-400 cursor-pointer"
+            />
           </label>
 
-          <label className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
-            <span><span className="block text-xs font-medium text-gray-200">{t.settingsModal.maskModeLabel}</span><span className="mt-0.5 block text-[11px] text-gray-500">{t.settingsModal.maskModeDesc}</span></span>
-            <input type="checkbox" checked={!!settings.maskChinese} onChange={(event) => updateSettings({ maskChinese: event.target.checked })} className="h-4 w-4 accent-cyan-400" />
-          </label>
-
+          {/* Footer with Save & Close */}
           <div className="flex justify-end border-t border-white/10 pt-4">
-            <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-400 px-4 py-2 text-xs font-semibold text-slate-950 transition-colors hover:bg-cyan-300">
-              <Check size={14} /> {t.saveAndClose}
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-500 px-5 py-2.5 text-xs font-bold text-slate-950 shadow-[0_4px_14px_rgba(6,182,212,0.3)] transition-all hover:brightness-110 active:scale-95"
+            >
+              <Check size={14} />
+              <span>{t.saveAndClose}</span>
             </button>
           </div>
         </div>

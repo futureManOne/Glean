@@ -44,84 +44,105 @@
   line-height: 30px !important;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar (Obsidian Dark with smooth pill track) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(24, 24, 27, 0.6);
-  border-radius: 4px;
+  background: rgba(14, 17, 23, 0.6);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(113, 113, 122, 0.5);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(161, 161, 170, 0.8);
+  background: rgba(255, 255, 255, 0.32);
 }
 
-/* Subtitle and token highlights */
+/* Subtitle and token highlights: subtle pastel tones with high contrast */
 .token-word {
   cursor: pointer;
-  border-radius: 3px;
-  padding: 0 2px;
-  transition: all 0.15s ease-in-out;
+  border-radius: 4px;
+  padding: 0 3px;
+  margin: 0 1px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-block;
+  position: relative;
 }
 
 .token-word:hover {
-  background-color: rgba(59, 130, 246, 0.35);
-  text-decoration: underline;
+  background-color: rgba(6, 182, 212, 0.22);
+  text-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
   transform: translateY(-1px);
 }
 
 .token-known {
-  color: #86efac;
+  color: #a7f3d0; /* subtle emerald-200 pastel */
 }
 
 .token-learning {
-  color: #c084fc;
+  color: #e9d5ff; /* subtle purple-200 pastel */
 }
 
 .token-mastered {
-  color: #93c5fd;
+  color: #bae6fd; /* subtle sky-200 pastel */
 }
 
 /* Glassmorphism background for subtitle bar */
 .subtitle-backdrop {
-  background: rgba(15, 15, 18, 0.88);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
-/* Language Reactor 1:1 High Contrast & Quality Aesthetics */
+/* High Contrast & Crisp Subtitle Text Shadow */
 .lr-text-shadow {
-  text-shadow: 0 0 7px rgba(0, 0, 0, 0.95), 0 0 16px rgba(0, 0, 0, 0.75);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 8px rgba(0, 0, 0, 0.85),
+    0 0 18px rgba(0, 0, 0, 0.75);
 }
 
+/* Sleek frosted glass capsule pill */
 .lr-pill-bg {
-  background: rgba(18, 18, 22, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .lr-btn-shadow {
-  filter: drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.6));
 }
 
 .lr-drag-handle {
   cursor: grab;
   user-select: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .lr-drag-handle:active {
   cursor: grabbing;
+}
+
+/* Accessible Focus Rings */
+.focus-ring {
+  outline: none;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.5), 0 0 0 4px rgba(6, 182, 212, 0.2);
+  border-color: rgba(6, 182, 212, 0.8);
 }
 
