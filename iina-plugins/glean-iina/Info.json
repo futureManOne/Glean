@@ -1,0 +1,18 @@
+{
+  "name": "Glean Subtitle",
+  "identifier": "top.defiy.glean-iina",
+  "version": "0.1.0",
+  "author": {
+    "name": "Glean"
+  },
+  "description": "为 OpenList 本地代理视频生成 Glean 双语字幕（英文原句 + AI 中文精翻），以原生 ASS 字幕轨载入 IINA。",
+  "entry": "main.js",
+  "subtitleProviders": [
+    {
+      "id": "glean-openlist",
+      "name": "Glean 双语 (OpenList)"
+    }
+  ],
+  "permissions": ["network-request", "file-system", "show-osd"],
+  "allowedDomains": ["127.0.0.1", "localhost"]
+}
