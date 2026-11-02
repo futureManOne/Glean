@@ -230,7 +230,8 @@ const WordPopupInner: React.FC = () => {
 
       {/* Word Popup Card */}
       <div
-        className="fixed z-[1000000] w-[400px] max-h-[530px] bg-[#121620]/95 backdrop-blur-xl text-gray-100 rounded-2xl shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8),0_0_1px_1px_rgba(255,255,255,0.12)] border border-white/15 flex flex-col overflow-hidden font-sans ring-1 ring-black/50 animate-in fade-in zoom-in-95 duration-150"
+        translate="no"
+        className="notranslate fixed z-[1000000] w-[400px] max-h-[530px] bg-[#121620]/95 backdrop-blur-xl text-gray-100 rounded-2xl shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8),0_0_1px_1px_rgba(255,255,255,0.12)] border border-white/15 flex flex-col overflow-hidden font-sans ring-1 ring-black/50 animate-in fade-in zoom-in-95 duration-150"
         style={{
           left: `${popupPosition.x}px`,
           top: `${popupPosition.y}px`,

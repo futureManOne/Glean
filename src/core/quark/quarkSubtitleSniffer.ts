@@ -266,7 +266,8 @@ export class QuarkSubtitleSniffer implements SubtitleSniffer {
   private handleEpisodeSwitch(newVideoSrc: string, explicitTitle?: string) {
     const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
     const detectedTitle = explicitTitle || detectQuarkVideoTitle();
-    console.log(`[Glean] Episode switched! Resetting video session. (title: ${detectedTitle || 'unnamed'})`);
+    const urlChanged = Boolean(this.lastUrl && this.lastUrl !== currentUrl);
+    const store = useAppStore.getState();
 
     this.processedTrackUrls.clear();
     this.lastCapturedText = '';
@@ -275,11 +276,22 @@ export class QuarkSubtitleSniffer implements SubtitleSniffer {
     this.lastUrl = currentUrl;
     this.lastVideoTitle = detectedTitle;
 
-    // 1. Completely reset video session in AppStore (clears cues, offsets, ai states, isUserImportedSubtitle)
-    useAppStore.getState().resetVideoSession(newVideoSrc, detectedTitle);
+    // Quark CDN URLs are signed and the player title churns inside a single episode (seek / quality /
+    // segment refresh). Such churn is not an episode switch, so it must never delete a user's import.
+    if (!urlChanged && store.isUserImportedSubtitle && store.cues.length > 0) {
+      console.log('[Glean] Episode src/title changed without navigation; keeping user-imported subtitles.');
+      return;
+    }
+
+    console.log(`[Glean] Episode switched! Resetting video session. (title: ${detectedTitle || 'unnamed'})`);
+
+    // 1. Completely reset video session in AppStore (clears cues, offsets, ai states, isUserImportedSubtitle).
+    // The identity is the page URL, matching AppOverlay's SPA watchdog — a signed CDN URL here made the
+    // watchdog see a phantom switch on the next tick and wipe the freshly loaded cues.
+    store.resetVideoSession(currentUrl || newVideoSrc, detectedTitle);
 
     // 2. Attempt automatic episode matching against detected folder subtitles
-    const folderSubs = useAppStore.getState().detectedFolderSubtitles;
+    const folderSubs = store.detectedFolderSubtitles;
     if (detectedTitle && folderSubs.length > 0) {
       const matched = matchEpisodeSubtitle(detectedTitle, folderSubs);
       if (matched) {

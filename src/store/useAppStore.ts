@@ -352,6 +352,11 @@ export const useAppStore = create<AppStoreState>((set, get) => {
         lastPausedCueId: null,
         subtitleTimeOffset: 0,
         isUserImportedSubtitle: false,
+        detectedFolderSubtitles: [],
+        isAdPlaying: false,
+        selectedWord: null,
+        wordExplanation: null,
+        isLoadingExplanation: false,
         selectedSentenceCue: null,
         sentenceAnalysis: null,
         streamingAnalysisText: '',
@@ -364,7 +369,7 @@ export const useAppStore = create<AppStoreState>((set, get) => {
 
     setVideoId: (videoId) => {
       const prev = get().currentVideoId;
-      if (prev && videoId && prev !== videoId) {
+      if (videoId && prev !== videoId) {
         get().resetVideoSession(videoId);
         return;
       }
@@ -639,7 +644,9 @@ export const useAppStore = create<AppStoreState>((set, get) => {
     loadDemoSubtitles: () => {
       currentSegmentationSessionId++;
       const currentWords = get().savedWords || INITIAL_SAVED_WORDS;
-      set({ currentVideoId: 'demo', cues: [] });
+      // Never touch currentVideoId here: it holds the host video identity. Writing 'demo' made the
+      // SPA watchdog in AppOverlay treat the demo load as a video switch and wipe the cues instantly.
+      set({ cues: [] });
       set({ cues: processCuesWithWords(DEMO_SUBTITLES, currentWords), currentCueIndex: 0, subtitleTimeOffset: 0 });
     },
 
@@ -648,7 +655,7 @@ export const useAppStore = create<AppStoreState>((set, get) => {
       const parsed = parseSubtitleContent(rawContent);
       if (parsed && parsed.length > 0) {
         const currentWords = get().savedWords || INITIAL_SAVED_WORDS;
-        set({ currentVideoId: fileName || 'file', cues: [] });
+        set({ cues: [] });
         const processed = processCuesWithWords(parsed, currentWords);
         const { currentTime, currentCueIndex } = get();
 
@@ -665,7 +672,6 @@ export const useAppStore = create<AppStoreState>((set, get) => {
         }
 
         set({
-          currentVideoId: fileName || 'file',
           cues: processed,
           currentCueIndex: targetIndex,
           subtitleTimeOffset: 0,

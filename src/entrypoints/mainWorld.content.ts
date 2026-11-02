@@ -119,8 +119,15 @@ function initYouTubeMainWorld() {
     function dispatchTimedtext(content: any, transContent: any, url: string, format = 'json3', trackName = '') {
       if (!content) return;
       const curVid = getCurrentVideoId();
+      try {
+        const u = new URL(url, window.location.origin);
+        const urlVid = u.searchParams.get('v');
+        if (urlVid && curVid && urlVid !== curVid) {
+          console.warn('[Glean MainWorld] Discarding timedtext belonging to previous video:', urlVid, 'current active:', curVid);
+          return;
+        }
+      } catch (_) {}
       if (url && url === lastDispatchedUrl && curVid === lastDispatchedVideoId) return;
-
       lastDispatchedUrl = url || '';
       if (curVid) lastDispatchedVideoId = curVid;
 
@@ -266,6 +273,10 @@ function initYouTubeMainWorld() {
           .then(d => d || fetch(transUrl.replace('tlang=zh-Hans', 'tlang=zh'), { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null))
           .catch(() => null)
       ]).then(([origData, transData]) => {
+        if (getCurrentVideoId() !== curVid) {
+          console.warn('[Glean MainWorld] Video switched during fetch, discarding timedtext for:', curVid);
+          return;
+        }
         if (origData && origData.events && origData.events.length > 0) {
           const validTrans = transData && transData.events && transData.events.length > 0 ? transData : null;
           dispatchTimedtext(origData, validTrans, json3Url, 'json3', label);
@@ -273,6 +284,7 @@ function initYouTubeMainWorld() {
           fetch(rawUrl, { credentials: 'same-origin' })
             .then(r => r.text())
             .then(txt => {
+              if (getCurrentVideoId() !== curVid) return;
               if (txt && (txt.includes('WEBVTT') || txt.includes('<transcript') || txt.includes('<timedtext') || txt.includes('-->'))) {
                 const fmt = txt.includes('WEBVTT') ? 'vtt' : (txt.includes('<transcript') || txt.includes('<timedtext') ? 'xml' : 'vtt');
                 dispatchTimedtext(txt, null, rawUrl, fmt, label);
@@ -308,9 +320,13 @@ function initYouTubeMainWorld() {
 
         // 1. YouTube Player API with { includeAsr: true }
         if (player && typeof player.getOption === 'function') {
-          const list = player.getOption('captions', 'tracklist', { includeAsr: true });
-          if (Array.isArray(list) && list.length > 0 && list[0] && (list[0].baseUrl || list[0].url)) {
-            tracks = list;
+          const videoData = typeof player.getVideoData === 'function' ? player.getVideoData() : null;
+          const playerVid = videoData?.video_id;
+          if (!playerVid || playerVid === curVid) {
+            const list = player.getOption('captions', 'tracklist', { includeAsr: true });
+            if (Array.isArray(list) && list.length > 0 && list[0] && (list[0].baseUrl || list[0].url)) {
+              tracks = list;
+            }
           }
         }
 

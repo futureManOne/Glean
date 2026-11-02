@@ -107,11 +107,14 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
     if ((!isYouTube && !isBilibili) || !isSidePanelOpen) return;
     const host = document.createElement('language-reactor-overlay');
     host.dataset.gleanTranscriptHost = 'true';
+    host.setAttribute('translate', 'no');
+    host.classList.add('notranslate');
     const shadow = host.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
     style.textContent = tailwindCss + ':host{display:block;width:100%;min-width:0}';
     const mount = document.createElement('div');
-    mount.className = 'language-reactor-root';
+    mount.className = 'language-reactor-root notranslate';
+    mount.setAttribute('translate', 'no');
     shadow.append(style, mount);
 
     const replacementStyle = document.createElement('style');
@@ -411,10 +414,10 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ player }) => {
 
   const panel = (
     <div
-      data-glean-transcript
       data-vocabframe-transcript
+      translate="no"
       style={panelStyle}
-      className={`z-[99999] flex flex-col select-none overflow-hidden bg-[#0e1117] text-gray-200 shadow-2xl font-sans ${isEmbedded ? 'rounded-xl border border-white/10' : 'border-l border-white/10'}`}
+      className={`z-[99999] notranslate flex flex-col select-none overflow-hidden bg-[#0e1117] text-gray-200 shadow-2xl font-sans ${isEmbedded ? 'rounded-xl border border-white/10' : 'border-l border-white/10'}`}
     >
       
       {/* 1. Header Tabs Bar */}

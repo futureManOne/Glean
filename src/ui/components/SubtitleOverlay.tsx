@@ -315,7 +315,8 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
       {cues.length > 0 && !isAd && (
         <div
           style={leftControlsStyle}
-          className="flex flex-col items-center space-y-2.5 select-none group/left transition-opacity duration-200"
+          translate="no"
+          className="flex flex-col items-center space-y-2.5 select-none notranslate group/left transition-opacity duration-200"
         >
           {/* Prev Cue (∧ / A) */}
           <div className="relative group/nav-btn flex items-center">
@@ -373,7 +374,7 @@ export const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ player, videoR
       {/* 2. Main Subtitle Area Container */}
       {/* 2. Main Subtitle Area Container (Strictly centered on video) */}
       {cues && cues.length > 0 && (
-        <div style={containerStyle} className="flex flex-col items-center justify-center pointer-events-none select-none min-h-[48px]">
+        <div style={containerStyle} translate="no" className="flex flex-col items-center justify-center pointer-events-none select-none notranslate min-h-[48px]">
           {/* 2.1 Centered Subtitle Cue Box: Strictly horizontally centered */}
           {hasActiveCue && (
             <div className="relative group/sub flex flex-col items-center w-full max-w-full px-2 sm:px-4 pointer-events-none">

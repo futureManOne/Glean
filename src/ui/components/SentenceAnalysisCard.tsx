@@ -195,7 +195,8 @@ export const SentenceAnalysisCard: React.FC<SentenceAnalysisCardProps> = ({ play
     <div
       role="dialog"
       aria-label={t.sentenceAnalysis.title}
-      className="fixed z-[999998] transition-all duration-200 select-text"
+      translate="no"
+      className="notranslate fixed z-[999998] transition-all duration-200 select-text"
       style={{
         right: isSidePanelOpen ? `${panelWidth + 16}px` : '24px',
         bottom: '88px',

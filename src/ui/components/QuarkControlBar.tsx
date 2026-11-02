@@ -53,6 +53,8 @@ export const QuarkControlBar: React.FC<QuarkControlBarProps> = ({ player, videoR
     // An isolated host participates in the native control bar's layout and auto-hide.
     const host = document.createElement('language-reactor-overlay');
     host.dataset.gleanControlsHost = 'true';
+    host.setAttribute('translate', 'no');
+    host.classList.add('notranslate');
     if (isBilibili) {
       host.className = 'bpx-player-ctrl-btn';
       host.style.marginRight = '12px';
@@ -81,6 +83,8 @@ export const QuarkControlBar: React.FC<QuarkControlBarProps> = ({ player, videoR
     mount.style.alignItems = 'center';
     mount.style.justifyContent = 'center';
     mount.style.boxSizing = 'border-box';
+    mount.setAttribute('translate', 'no');
+    mount.classList.add('notranslate');
     shadow.append(style, mount);
     const syncControls = () => {
       let controls: HTMLElement | null = null;
@@ -182,6 +186,8 @@ export const QuarkControlBar: React.FC<QuarkControlBarProps> = ({ player, videoR
       onPointerUp={event => event.stopPropagation()}
       onKeyDown={event => event.stopPropagation()}
       data-glean-native-control="true"
+      translate="no"
+      className="notranslate"
       style={{
         display: 'inline-flex',
         alignItems: 'center',

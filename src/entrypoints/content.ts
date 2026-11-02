@@ -5,6 +5,7 @@ import { createShadowRootUi } from 'wxt/client';
 import { AppOverlay } from '@/ui/components/AppOverlay';
 import { getPlayerAdapter, isSupportedHostname, isPlatformEnabled } from '@/core/player';
 import { useAppStore, STORAGE_KEY_SETTINGS } from '@/store/useAppStore';
+import { extractYouTubeVideoId } from '@/core/youtube/youtubeSubtitleSniffer';
 import tailwindCss from '@/ui/styles/tailwind.css?inline';
 
 export default defineContentScript({
@@ -26,7 +27,7 @@ export default defineContentScript({
       if (mountedUi) {
         try {
           mountedUi.remove();
-        } catch (_) {}
+        } catch {}
         mountedUi = null;
       }
       const existingEl = document.querySelector('language-reactor-overlay:not([data-glean-controls-host]):not([data-glean-transcript-host]):not([data-vocabframe-controls-host]):not([data-vocabframe-transcript-host])');
@@ -95,6 +96,14 @@ export default defineContentScript({
           anchor: mountTarget,
           append: 'last',
           onMount: (uiContainer, shadowRoot) => {
+            // Prevent Chrome and third-party auto-translate engines from tampering with learning tokens
+            if (shadowRoot.host) {
+              shadowRoot.host.setAttribute('translate', 'no');
+              shadowRoot.host.classList.add('notranslate');
+            }
+            uiContainer.setAttribute('translate', 'no');
+            uiContainer.classList.add('notranslate');
+
             // Inject Tailwind CSS inside shadow root
             const style = document.createElement('style');
             style.textContent = tailwindCss;
@@ -151,6 +160,18 @@ export default defineContentScript({
       window.addEventListener('popstate', debouncedCheck);
       window.addEventListener('hashchange', debouncedCheck);
       window.addEventListener('yt-navigate-finish', debouncedCheck);
+      window.addEventListener('yt-navigate-start', (e: Event) => {
+        const detailUrl = (e as CustomEvent)?.detail?.url;
+        if (detailUrl && typeof window !== 'undefined' && window.location.hostname.includes('youtube.com')) {
+          const fullUrl = detailUrl.startsWith('http') ? detailUrl : `${window.location.origin}${detailUrl}`;
+          const newVid = extractYouTubeVideoId(fullUrl);
+          const activeVid = useAppStore.getState().currentVideoId;
+          if (newVid && activeVid && newVid !== activeVid) {
+            useAppStore.getState().resetVideoSession(newVid, '');
+          }
+        }
+        debouncedCheck();
+      });
 
       // Periodically check URL changes for SPA routers using pushState/replaceState
       let lastHref = window.location.href;

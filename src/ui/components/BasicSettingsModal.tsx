@@ -48,7 +48,7 @@ export const BasicSettingsModal: React.FC<BasicSettingsModalProps> = ({ open, on
   })[density];
 
   return (
-    <div className="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-in fade-in duration-200">
+    <div translate="no" className="notranslate fixed inset-0 z-[9999999] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-in fade-in duration-200">
       <section
         ref={dialogRef}
         tabIndex={-1}

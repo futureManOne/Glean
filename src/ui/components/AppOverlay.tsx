@@ -9,6 +9,7 @@ import { TranscriptPanel } from './TranscriptPanel';
 import { QuarkControlBar } from './QuarkControlBar';
 import { createSubtitleSniffer } from '@/core/subtitle/snifferManager';
 import { detectPageVideoTitle } from '@/core/youtube/titleSanitizer';
+import { extractYouTubeVideoId } from '@/core/youtube/youtubeSubtitleSniffer';
 import { bilingualTranslator } from '@/core/ai/bilingualTranslator';
 import { AutoPauseEngine } from '@/core/player/autoPauseEngine';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -36,7 +37,8 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
     cycleSubtitleMode,
     setRepeatMode,
     repeatMode,
-    cues
+    cues,
+    resetVideoSession
   } = useAppStore();
 
   const [videoRect, setVideoRect] = useState<{ left: number; top: number; width: number; height: number; bottom: number } | null>(() => {
@@ -283,12 +285,25 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
     };
   }, [player, videoTitle, setVideoTitle, isSidePanelOpen]);
 
-  // Listen to route changes (SPA navigation across episodes) to reset video title & update rect
+  // Listen to route changes (SPA navigation across episodes) to reset video title, subtitles & update rect
   useEffect(() => {
     let lastUrl = window.location.href;
-    const handleUrlChange = () => {
-      if (window.location.href !== lastUrl) {
-        lastUrl = window.location.href;
+    const isYouTube = typeof window !== 'undefined' && window.location.hostname.includes('youtube.com');
+
+    const checkAndHandleVideoSwitch = (targetUrl?: string) => {
+      const url = targetUrl || window.location.href;
+      const curVid = isYouTube ? extractYouTubeVideoId(url) : url;
+      const activeVid = useAppStore.getState().currentVideoId;
+
+      if (url !== lastUrl || (curVid && activeVid && curVid !== activeVid)) {
+        lastUrl = url;
+        // A local subtitle import no longer stamps its file name onto the video identity, so a session
+        // with no identity yet (activeVid === null) must also be reset on real navigation: otherwise
+        // the imported cues would leak into the next episode.
+        if (curVid && curVid !== activeVid) {
+          console.log('[Glean] AppOverlay detected video switch:', activeVid, '->', curVid);
+          resetVideoSession(curVid, '');
+        }
         setVideoTitle('');
         setTimeout(() => {
           window.dispatchEvent(new Event('resize'));
@@ -296,20 +311,30 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
       }
     };
 
-    window.addEventListener('hashchange', handleUrlChange);
-    window.addEventListener('popstate', handleUrlChange);
-    window.addEventListener('yt-navigate-finish', handleUrlChange);
-    const interval = setInterval(handleUrlChange, 1000);
+    const onYtNavigateStart = (e: Event) => {
+      const detailUrl = (e as CustomEvent)?.detail?.url;
+      if (detailUrl) {
+        const fullUrl = detailUrl.startsWith('http') ? detailUrl : `${window.location.origin}${detailUrl}`;
+        checkAndHandleVideoSwitch(fullUrl);
+      }
+    };
+
+    const onUrlCheck = () => checkAndHandleVideoSwitch();
+
+    window.addEventListener('hashchange', onUrlCheck);
+    window.addEventListener('popstate', onUrlCheck);
+    window.addEventListener('yt-navigate-start', onYtNavigateStart);
+    window.addEventListener('yt-navigate-finish', onUrlCheck);
+    const interval = setInterval(onUrlCheck, 500);
 
     return () => {
-      window.removeEventListener('hashchange', handleUrlChange);
-      window.removeEventListener('popstate', handleUrlChange);
-      window.removeEventListener('yt-navigate-finish', handleUrlChange);
+      window.removeEventListener('hashchange', onUrlCheck);
+      window.removeEventListener('popstate', onUrlCheck);
+      window.removeEventListener('yt-navigate-start', onYtNavigateStart);
+      window.removeEventListener('yt-navigate-finish', onUrlCheck);
       clearInterval(interval);
     };
-  }, [setVideoTitle]);
-
-  // Listen to video timeupdate and play state with auto sliding-window translation
+  }, [setVideoTitle, resetVideoSession]);
   useEffect(() => {
     if (!settings.pluginEnabled) {
       bilingualTranslator.cancelBatchTranslation();
@@ -469,7 +494,7 @@ export const AppOverlay: React.FC<AppOverlayProps> = ({ player }) => {
   }, [player, prevCue, nextCue, repeatCurrentCue, togglePlay, updateSettings, settings, setSidePanelOpen, isSidePanelOpen, toggleSubtitleVisibility, cycleSubtitleMode, setRepeatMode, repeatMode]);
 
   return (
-    <div className="language-reactor-root font-sans antialiased text-gray-100">
+    <div translate="no" className="language-reactor-root notranslate font-sans antialiased text-gray-100">
       {/* 1. Drag & Drop Subtitle File Overlay */}
       {isDraggingFile && (
         <div className="fixed inset-0 z-[9999999] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 pointer-events-none animate-in fade-in duration-150">

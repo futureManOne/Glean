@@ -95,7 +95,9 @@ export class YouTubeSubtitleSniffer implements SubtitleSniffer {
   private cachedMainVideoCues: SubtitleCue[] | null = null;
   private cachedMainVideoTitle = '';
   private cachedMainVideoId = '';
-  private ytNavigateListener: (() => void) | null = null;
+  private ytNavigateListener: ((event?: Event) => void) | null = null;
+  private staleTextTracks = new WeakSet<TextTrack>();
+  private lastSwitchTimestamp = 0;
 
   constructor(player: VideoPlayerAdapter) {
     this.player = player;
@@ -120,17 +122,17 @@ export class YouTubeSubtitleSniffer implements SubtitleSniffer {
   }
 
   public handleVideoSwitch(newVideoId: string): void {
-    if (!newVideoId) return;
-    if (this.cachedMainVideoId === newVideoId && this.hasOfficialSubtitles && useAppStore.getState().cues.length > 0) {
+    if (newVideoId && this.cachedMainVideoId === newVideoId && this.hasOfficialSubtitles && useAppStore.getState().cues.length > 0) {
       return;
     }
 
     console.log(`[Glean] YouTube video switch detected: "${this.cachedMainVideoId}" -> "${newVideoId}". Resetting sniffer.`);
+    this.lastSwitchTimestamp = Date.now();
     this.hasOfficialSubtitles = false;
     this.isLiveCaptionActive = false;
     this.isAdCurrentlyPlaying = false;
     this.cachedMainVideoCues = null;
-    this.cachedMainVideoId = newVideoId;
+    this.cachedMainVideoId = newVideoId || '';
     this.cachedMainVideoTitle = '';
     this.lastCapturedText = '';
     this.lastAdCurrentTime = 0;
@@ -142,27 +144,38 @@ export class YouTubeSubtitleSniffer implements SubtitleSniffer {
     for (const tr of this.observedTracks) {
       try {
         tr.oncuechange = null;
-      } catch (_) {}
+      } catch {}
     }
     this.observedTracks = [];
     this.processedTrackUrls.clear();
     this.pendingCues = null;
 
-    useAppStore.getState().setIsAdPlaying?.(false);
-    useAppStore.getState().setVideoId(newVideoId);
-    useAppStore.getState().setCues([]);
-    useAppStore.getState().setVideoTitle('');
-    bilingualTranslator.reset();
+    // Mark all existing HTML5 TextTracks from previous video as stale to prevent resurrection
+    try {
+      const video = this.player?.getVideoElement?.();
+      if (video && video.textTracks) {
+        for (let i = 0; i < video.textTracks.length; i++) {
+          const tr = video.textTracks[i];
+          this.staleTextTracks.add(tr);
+          tr.mode = 'disabled';
+        }
+      }
+    } catch {}
 
-    if (typeof window !== 'undefined') {
+    // Strictly wipe out previous video session in Store
+    useAppStore.getState().resetVideoSession(newVideoId || undefined, '');
+
+    if (newVideoId && typeof window !== 'undefined') {
       window.postMessage({ type: '__LR_TRIGGER_YT_INSPECT__' }, '*');
     }
 
-    setTimeout(() => {
-      if (this.cachedMainVideoId === newVideoId && !this.hasOfficialSubtitles) {
-        this.prefetchFullVideoSubtitles();
-      }
-    }, 300);
+    if (newVideoId) {
+      setTimeout(() => {
+        if (this.cachedMainVideoId === newVideoId && !this.hasOfficialSubtitles) {
+          this.prefetchFullVideoSubtitles();
+        }
+      }, 300);
+    }
   }
 
   public syncCachedCues(cues: SubtitleCue[]): void {
@@ -324,7 +337,7 @@ export class YouTubeSubtitleSniffer implements SubtitleSniffer {
       for (const s of scripts) {
         const text = s.textContent || '';
         if (!text.includes('captionTracks')) continue;
-
+        if (curVid && !text.includes(curVid)) continue;
         const key = '"captionTracks":';
         let pos = 0;
         while ((pos = text.indexOf(key, pos)) !== -1) {
@@ -543,6 +556,13 @@ export class YouTubeSubtitleSniffer implements SubtitleSniffer {
           .catch(() => null)
       ]);
 
+      // Guard against race condition: check if user already switched to another video
+      const activeUrlVid = typeof window !== 'undefined' ? extractYouTubeVideoId(window.location.href) : '';
+      if (activeUrlVid && activeUrlVid !== videoId) {
+        console.warn(`[Glean] Discarding stale upfront tracks for ${videoId}, current active video is ${activeUrlVid}`);
+        return false;
+      }
+
       if (origRes && Array.isArray(origRes.events) && origRes.events.length > 0) {
         const isAsr = Boolean(
           chosen?.kind === 'asr' ||
@@ -662,15 +682,20 @@ export class YouTubeSubtitleSniffer implements SubtitleSniffer {
     this.prefetchFullVideoSubtitles();
 
     // Listen for YouTube SPA navigation for immediate state reset
-    this.ytNavigateListener = () => {
+    this.ytNavigateListener = (event?: Event) => {
       if (!this.isSniffing || typeof window === 'undefined') return;
-      const currentUrl = window.location.href;
+      const detailUrl = (event as CustomEvent)?.detail?.url;
+      const currentUrl = detailUrl
+        ? (detailUrl.startsWith('http') ? detailUrl : `${window.location.origin}${detailUrl}`)
+        : window.location.href;
       const curVid = extractYouTubeVideoId(currentUrl);
 
       if (curVid && this.cachedMainVideoId && curVid !== this.cachedMainVideoId) {
         this.handleVideoSwitch(curVid);
+      } else if (!curVid && this.cachedMainVideoId && !currentUrl.includes('/watch') && !currentUrl.includes('/shorts')) {
+        this.handleVideoSwitch('');
       }
-      this.lastUrl = currentUrl;
+      this.lastUrl = window.location.href;
     };
     window.addEventListener('yt-navigate-start', this.ytNavigateListener);
     window.addEventListener('yt-navigate-finish', this.ytNavigateListener);
@@ -1182,12 +1207,15 @@ export class YouTubeSubtitleSniffer implements SubtitleSniffer {
 
       for (let i = 0; i < video.textTracks.length; i++) {
         const track = video.textTracks[i];
+        if (this.staleTextTracks.has(track)) {
+          // Stale track belonging to previous video, strictly ignore!
+          continue;
+        }
         if (track.mode === 'disabled') {
           try {
             track.mode = 'hidden';
-          } catch (_) {}
+          } catch {}
         }
-
         // If track has full cues loaded on the main video (AGENTS.md Layer 1: > 1 authoritative cues)
         if (!this.isAdCurrentlyPlaying && track.cues && track.cues.length > 1) {
           const curVid = typeof window !== 'undefined' ? extractYouTubeVideoId(window.location.href) : '';
